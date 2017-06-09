@@ -1,0 +1,24 @@
+{
+  "author": "magik6k",
+  "bugs": {
+    "url": "github.com/magik6k/git-remote-ipld"
+  },
+  "gx": {
+    "dvcsimport": "github.com/magik6k/git-remote-ipld"
+  },
+  "gxDependencies": [
+    {
+      "author": "whyrusleeping",
+      "hash": "QmZe3S3sXMWar3oPmrd8jHV8NoAWfPfLGFD8PsK3YrYpqv",
+      "name": "go-cid",
+      "version": "0.7.13"
+    }
+  ],
+  "gxVersion": "0.10.0",
+  "language": "go",
+  "license": "",
+  "name": "git-remote-ipld",
+  "releaseCmd": "git commit -a -m \"gx publish $VERSION\"",
+  "version": "0.0.0"
+}
+
