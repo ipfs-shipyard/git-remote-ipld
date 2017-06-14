@@ -152,9 +152,3 @@ func (p *Push) processLinks(object []byte) error {
 	}
 	return nil
 }
-
-/*func getHashPath(localDir string, hash string) (string, error) {
-	base := path.Join(localDir, hash[:2])
-	objectPath := path.Join(base, hash[2:])
-	return objectPath, nil
-}*/

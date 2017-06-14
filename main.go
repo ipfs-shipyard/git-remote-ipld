@@ -22,41 +22,6 @@ func getLocalDir() (string, error) {
 	return localdir, nil
 }
 
-/*func gitListRefs() (map[string]string, error) {
-	out, err := exec.Command(
-		"git", "for-each-ref", "--format=%(objectname) %(refname)",
-		"refs/heads/",
-	).Output()
-	if err != nil {
-		return nil, err
-	}
-
-	lines := bytes.Split(out, []byte{'\n'})
-	refs := make(map[string]string, len(lines))
-
-	for _, line := range lines {
-		fields := bytes.Split(line, []byte{' '})
-
-		if len(fields) < 2 {
-			break
-		}
-
-		refs[string(fields[1])] = string(fields[0])
-	}
-
-	return refs, nil
-}*/
-
-/*func gitSymbolicRef(name string) (string, error) {
-	out, err := exec.Command("git", "symbolic-ref", name).Output()
-	if err != nil {
-		return "", fmt.Errorf(
-			"GitSymbolicRef: git symbolic-ref %s: %v", name, out, err)
-	}
-
-	return string(bytes.TrimSpace(out)), nil
-}*/
-
 func Main() error {
 	l := log.New(os.Stderr, "", 0)
 
@@ -68,8 +33,6 @@ func Main() error {
 	if len(os.Args) < 3 {
 		return fmt.Errorf("Usage: git-remote-ipld remote-name url")
 	}
-
-	//remoteName := os.Args[1]
 
 	localDir, err := getLocalDir()
 	if err != nil {
@@ -105,32 +68,10 @@ func Main() error {
 		//l.Printf("< %s", command)
 		switch {
 		case command == "capabilities":
-			//printf("refspec %s\n", refspec)
 			printf("push\n")
 			printf("fetch\n")
 			printf("\n")
 		case strings.HasPrefix(command, "list"):
-			/*refs, err := gitListRefs()
-			if err != nil {
-				printf("%s refs/heads/master\n", os.Args[2]) //todo: check hash
-				printf("@%s HEAD\n", "refs/heads/master")
-			} else {
-				head, err := gitSymbolicRef("HEAD")
-				if err != nil {
-					return fmt.Errorf("command list: %v", err)
-				}
-
-				if len(refs) == 0 {
-					printf("%s refs/heads/master\n", os.Args[2]) //todo: check hash
-				}
-				for refname := range refs {
-					printf("%s %s\n", os.Args[2], refname) //todo: check hash
-				}
-
-				printf("@%s HEAD\n", head)
-			}
-			printf("\n")*/
-
 			it, err := repo.Branches()
 			if err != nil {
 				return err
@@ -180,7 +121,6 @@ func Main() error {
 			}
 
 			hash := localRef.Hash()
-			l.Printf("setref '%s'\n", refs[1])
 			tracker.SetRef(refs[1], (&hash)[:])
 
 			l.Printf("Pushed to IPFS as \x1b[32mipld::%s\x1b[39m\n", headHash)
@@ -194,6 +134,13 @@ func Main() error {
 			if err != nil {
 				return fmt.Errorf("command fetch: %v", err)
 			}
+
+			sha, err := hex.DecodeString(parts[1])
+			if err != nil {
+				return fmt.Errorf("push: %v", err)
+			}
+
+			tracker.SetRef(parts[2], sha)
 
 			printf("\n")
 		case command == "\n":
