@@ -25,7 +25,7 @@ func getLocalDir() (string, error) {
 
 func Main() error {
 	l := log.New(os.Stderr, "", 0)
-	l.Println(os.Args)
+	//l.Println(os.Args)
 
 	printf := func(format string, a ...interface{}) (n int, err error) {
 		//l.Printf("> "+format, a...)
@@ -74,6 +74,11 @@ func Main() error {
 			printf("fetch\n")
 			printf("\n")
 		case strings.HasPrefix(command, "list"):
+			headRef, err := repo.Reference(plumbing.HEAD, false)
+			if err != nil {
+				return err
+			}
+
 			it, err := repo.Branches()
 			if err != nil {
 				return err
@@ -90,7 +95,19 @@ func Main() error {
 					r = make([]byte, 20)
 				}
 
-				printf("%s %s\n", hex.EncodeToString(r), ref.Name())
+				if !strings.HasPrefix(command, "list for-push") && headRef.Target() == ref.Name() && headRef.Type() == plumbing.SymbolicReference && len(os.Args) >= 3 {
+					sha, err := hex.DecodeString(os.Args[2])
+					if err != nil {
+						return err
+					}
+					if len(sha) != 20 {
+						return errors.New("invalid hash length")
+					}
+
+					printf("%s %s\n", os.Args[2], headRef.Target().String())
+				} else {
+					printf("%s %s\n", hex.EncodeToString(r), ref.Name())
+				}
 
 				return nil
 			})
@@ -99,7 +116,7 @@ func Main() error {
 				return err
 			}
 
-			if n == 0 && !strings.HasPrefix(command, "list for-push") && len(os.Args) >= 2 {
+			if n == 0 && !strings.HasPrefix(command, "list for-push") && len(os.Args) >= 3 {
 				sha, err := hex.DecodeString(os.Args[2])
 				if err != nil {
 					return err
@@ -109,13 +126,6 @@ func Main() error {
 				}
 
 				printf("%s %s\n", os.Args[2], "refs/heads/master")
-			}
-
-
-
-			headRef, err := repo.Reference(plumbing.HEAD, false)
-			if err != nil {
-				return err
 			}
 
 			switch headRef.Type() {
