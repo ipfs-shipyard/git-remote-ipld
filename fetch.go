@@ -20,16 +20,18 @@ type Fetch struct {
 	objectDir string
 	gitDir    string
 
-	todo *list.List
-	log  *log.Logger
+	todo    *list.List
+	log     *log.Logger
+	tracker *Tracker
 }
 
-func NewFetch(gitDir string) *Fetch {
+func NewFetch(gitDir string, tracker *Tracker) *Fetch {
 	return &Fetch{
 		objectDir: path.Join(gitDir, "objects"),
 		gitDir:    gitDir,
 		todo:      list.New(),
 		log:       log.New(os.Stderr, "fetch: ", 0),
+		tracker:   tracker,
 	}
 }
 
@@ -39,12 +41,6 @@ func (f *Fetch) FetchHash(base string) error {
 }
 
 func (f *Fetch) doWork() error {
-	tracker, err := NewTracker(f.gitDir)
-	if err != nil {
-		return fmt.Errorf("fetch: %v", err)
-	}
-	defer tracker.Close()
-
 	api := ipfs.NewShell("localhost:5001") //todo: config
 
 	for e := f.todo.Front(); e != nil; e = e.Next() {
@@ -79,7 +75,6 @@ func (f *Fetch) doWork() error {
 
 		/////////////////
 
-		f.log.Println("write " + *objectPath)
 		err = ioutil.WriteFile(*objectPath, object, 0444)
 		if err != nil {
 			return fmt.Errorf("fetch: %v", err)
@@ -90,7 +85,7 @@ func (f *Fetch) doWork() error {
 			return fmt.Errorf("fetch: %v", err)
 		}
 
-		err = tracker.AddEntry(sha)
+		err = f.tracker.AddEntry(sha)
 		if err != nil {
 			return fmt.Errorf("fetch: %v", err)
 		}

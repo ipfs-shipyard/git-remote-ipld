@@ -1,7 +1,6 @@
 package main
 
 import (
-	"compress/zlib"
 	"container/list"
 	"encoding/hex"
 	"fmt"
@@ -12,25 +11,34 @@ import (
 
 	ipfs "github.com/ipfs/go-ipfs-api"
 	ipldgit "github.com/ipfs/go-ipld-git"
+	git "gopkg.in/src-d/go-git.v4"
 
 	cid "github.com/ipfs/go-cid"
 	mh "github.com/multiformats/go-multihash"
+	"gopkg.in/src-d/go-git.v4/plumbing"
 )
 
 type Push struct {
 	objectDir string
 	gitDir    string
 
-	todo *list.List
-	log  *log.Logger
+	done    uint64
+	todoc   uint64
+	todo    *list.List
+	log     *log.Logger
+	tracker *Tracker
+	repo    *git.Repository
 }
 
-func NewPush(gitDir string) *Push {
+func NewPush(gitDir string, tracker *Tracker, repo *git.Repository) *Push {
 	return &Push{
 		objectDir: path.Join(gitDir, "objects"),
 		gitDir:    gitDir,
 		todo:      list.New(),
 		log:       log.New(os.Stderr, "push: ", 0),
+		tracker:   tracker,
+		repo:      repo,
+		todoc:     1,
 	}
 }
 
@@ -40,16 +48,25 @@ func (p *Push) PushHash(hash string) error {
 }
 
 func (p *Push) doWork() error {
-	tracker, err := NewTracker(p.gitDir)
-	if err != nil {
-		return fmt.Errorf("fetch: %v", err)
-	}
-	defer tracker.Close()
-
 	api := ipfs.NewShell("localhost:5001") //todo: config
 
 	for e := p.todo.Front(); e != nil; e = e.Next() {
 		hash := e.Value.(string)
+
+		sha, err := hex.DecodeString(hash)
+		if err != nil {
+			return fmt.Errorf("push: %v", err)
+		}
+
+		has, err := p.tracker.HasEntry(sha)
+		if err != nil {
+			return fmt.Errorf("push/process: %v", err)
+		}
+
+		if has {
+			p.todoc--
+			continue
+		}
 
 		mhash, err := mh.FromHexString("1114" + hash)
 		if err != nil {
@@ -58,52 +75,56 @@ func (p *Push) doWork() error {
 
 		expectedCid := cid.NewCidV1(0x78, mhash)
 
-		objectPath, err := getHashPath(p.objectDir, hash)
-
-		if _, err := os.Stat(objectPath); os.IsNotExist(err) {
-			return fmt.Errorf("object doesn't exist: %s", objectPath)
+		obj, err := p.repo.Storer.EncodedObject(plumbing.AnyObject, plumbing.NewHash(hash))
+		if err != nil {
+			return fmt.Errorf("push: %v", err)
 		}
 
-		f, err := os.Open(objectPath)
+		rawReader, err := obj.Reader()
 		if err != nil {
-			return err
-		}
-
-		rawReader, err := zlib.NewReader(f)
-		if err != nil {
-			return err
+			return fmt.Errorf("push: %v", err)
 		}
 
 		raw, err := ioutil.ReadAll(rawReader)
+		if err != nil {
+			return fmt.Errorf("push: %v", err)
+		}
 
-		p.log.Printf("%s %s\r\x1b[A", hash, expectedCid.String())
+		switch obj.Type() {
+		case plumbing.CommitObject:
+			raw = append([]byte(fmt.Sprintf("commit %d\x00", obj.Size())), raw...)
+		case plumbing.TreeObject:
+			raw = append([]byte(fmt.Sprintf("tree %d\x00", obj.Size())), raw...)
+		case plumbing.BlobObject:
+			raw = append([]byte(fmt.Sprintf("blob %d\x00", obj.Size())), raw...)
+		case plumbing.TagObject:
+			raw = append([]byte(fmt.Sprintf("tag %d\x00", obj.Size())), raw...)
+		}
+
+		p.done++
+		p.log.Printf("%d/%d %s %s\r\x1b[A", p.done, p.todoc, hash, expectedCid.String())
 
 		res, err := api.DagPut(raw, "raw", "git")
 		if err != nil {
-			return err
+			return fmt.Errorf("push: %v", err)
 		}
 
-		sha, err := hex.DecodeString(hash)
+		err = p.tracker.AddEntry(sha)
 		if err != nil {
-			return fmt.Errorf("fetch: %v", err)
-		}
-
-		err = tracker.AddEntry(sha)
-		if err != nil {
-			return fmt.Errorf("fetch: %v", err)
+			return fmt.Errorf("push: %v", err)
 		}
 
 		if expectedCid.String() != res {
 			return fmt.Errorf("CIDs don't match: expected %s, got %s", expectedCid.String(), res)
 		}
 
-		p.processLinks(raw, tracker)
+		p.processLinks(raw)
 	}
 	p.log.Printf("\n")
 	return nil
 }
 
-func (p *Push) processLinks(object []byte, tracker *Tracker) error {
+func (p *Push) processLinks(object []byte) error {
 	nd, err := ipldgit.ParseObjectFromBuffer(object)
 	if err != nil {
 		return fmt.Errorf("push/process: %v", err)
@@ -117,7 +138,7 @@ func (p *Push) processLinks(object []byte, tracker *Tracker) error {
 			return fmt.Errorf("push/process: %v", err)
 		}
 
-		has, err := tracker.HasEntry(decoded.Digest)
+		has, err := p.tracker.HasEntry(decoded.Digest)
 		if err != nil {
 			return fmt.Errorf("push/process: %v", err)
 		}
@@ -126,13 +147,14 @@ func (p *Push) processLinks(object []byte, tracker *Tracker) error {
 			continue
 		}
 
+		p.todoc++
 		p.todo.PushBack(hex.EncodeToString(decoded.Digest))
 	}
 	return nil
 }
 
-func getHashPath(localDir string, hash string) (string, error) {
+/*func getHashPath(localDir string, hash string) (string, error) {
 	base := path.Join(localDir, hash[:2])
 	objectPath := path.Join(base, hash[2:])
 	return objectPath, nil
-}
+}*/

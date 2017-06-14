@@ -2,14 +2,15 @@ package main
 
 import (
 	"bufio"
-	"bytes"
 	"fmt"
 	"log"
 	"os"
-	"os/exec"
 	"path"
 	"strings"
-	"io/ioutil"
+
+	git "gopkg.in/src-d/go-git.v4"
+	"gopkg.in/src-d/go-git.v4/plumbing"
+	"encoding/hex"
 )
 
 func getLocalDir() (string, error) {
@@ -21,7 +22,7 @@ func getLocalDir() (string, error) {
 	return localdir, nil
 }
 
-func gitListRefs() (map[string]string, error) {
+/*func gitListRefs() (map[string]string, error) {
 	out, err := exec.Command(
 		"git", "for-each-ref", "--format=%(objectname) %(refname)",
 		"refs/heads/",
@@ -44,9 +45,9 @@ func gitListRefs() (map[string]string, error) {
 	}
 
 	return refs, nil
-}
+}*/
 
-func gitSymbolicRef(name string) (string, error) {
+/*func gitSymbolicRef(name string) (string, error) {
 	out, err := exec.Command("git", "symbolic-ref", name).Output()
 	if err != nil {
 		return "", fmt.Errorf(
@@ -54,11 +55,10 @@ func gitSymbolicRef(name string) (string, error) {
 	}
 
 	return string(bytes.TrimSpace(out)), nil
-}
+}*/
 
 func Main() error {
 	l := log.New(os.Stderr, "", 0)
-	l.Println(os.Args)
 
 	printf := func(format string, a ...interface{}) (n int, err error) {
 		//l.Printf("> "+format, a...)
@@ -76,12 +76,21 @@ func Main() error {
 		return err
 	}
 
-	//refspec := fmt.Sprintf("refs/heads/*:refs/ipld/%s/*", remoteName)
+	repo, err := git.PlainOpen(localDir)
+	if err == git.ErrWorktreeNotProvided {
+		repoRoot, _ := path.Split(localDir)
 
-	/*err = os.Setenv("GIT_DIR", path.Join(*localDir, ".git"))
+		repo, err = git.PlainOpen(repoRoot)
+		if err != nil {
+			return err
+		}
+	}
+
+	tracker, err := NewTracker(localDir)
 	if err != nil {
-		return err
-	}*/
+		return fmt.Errorf("fetch: %v", err)
+	}
+	defer tracker.Close()
 
 	stdinReader := bufio.NewReader(os.Stdin)
 
@@ -91,15 +100,17 @@ func Main() error {
 			return err
 		}
 
+		command = strings.Trim(command, "\n")
+
 		//l.Printf("< %s", command)
 		switch {
-		case command == "capabilities\n":
+		case command == "capabilities":
 			//printf("refspec %s\n", refspec)
 			printf("push\n")
 			printf("fetch\n")
 			printf("\n")
 		case strings.HasPrefix(command, "list"):
-			refs, err := gitListRefs()
+			/*refs, err := gitListRefs()
 			if err != nil {
 				printf("%s refs/heads/master\n", os.Args[2]) //todo: check hash
 				printf("@%s HEAD\n", "refs/heads/master")
@@ -118,30 +129,67 @@ func Main() error {
 
 				printf("@%s HEAD\n", head)
 			}
+			printf("\n")*/
+
+			it, err := repo.Branches()
+			if err != nil {
+				return err
+			}
+
+			it.ForEach(func(ref *plumbing.Reference) error {
+				r, err := tracker.GetRef(ref.Name().String())
+				if err != nil {
+					return err
+				}
+				if r == nil {
+					r = make([]byte, 20)
+				}
+
+				printf("%s %s\n", hex.EncodeToString(r), ref.Name())
+
+				return nil
+			})
+
+			headRef, err := repo.Reference(plumbing.HEAD, false)
+			if err != nil {
+				return err
+			}
+
+			switch headRef.Type() {
+			case plumbing.HashReference:
+				printf("%s %s\n", headRef.Hash(), headRef.Name())
+			case plumbing.SymbolicReference:
+				printf("@%s %s\n", headRef.Target().String(), headRef.Name())
+			}
+
 			printf("\n")
 		case strings.HasPrefix(command, "push "):
 			refs := strings.Split(command[5:], ":")
-			from := refs[0]
-			head, err := ioutil.ReadFile(path.Join(localDir, from))
+
+			localRef, err := repo.Reference(plumbing.ReferenceName(refs[0]), true)
 			if err != nil {
 				return fmt.Errorf("command push: %v", err)
 			}
 
-			headHash := strings.Trim(string(head), " \t\n\r")
+			headHash := localRef.Hash().String()
 
-			push := NewPush(localDir)
+			push := NewPush(localDir, tracker, repo)
 			err = push.PushHash(headHash)
 			if err != nil {
 				return fmt.Errorf("command push: %v", err)
 			}
 
+			hash := localRef.Hash()
+			l.Printf("setref '%s'\n", refs[1])
+			tracker.SetRef(refs[1], (&hash)[:])
+
 			l.Printf("Pushed to IPFS as \x1b[32mipld::%s\x1b[39m\n", headHash)
-			printf("ok refs/heads/master")
+			printf("ok %s\n", refs[0])
 			printf("\n")
 		case strings.HasPrefix(command, "fetch "):
 			parts := strings.Split(command, " ")
 
-			fetch := NewFetch(localDir)
+			fetch := NewFetch(localDir, tracker)
 			err := fetch.FetchHash(parts[1])
 			if err != nil {
 				return fmt.Errorf("command fetch: %v", err)
@@ -149,6 +197,8 @@ func Main() error {
 
 			printf("\n")
 		case command == "\n":
+			return nil
+		case command == "":
 			return nil
 		default:
 			return fmt.Errorf("Received unknown command %q", command)

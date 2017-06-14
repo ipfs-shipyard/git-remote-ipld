@@ -13,7 +13,7 @@ type Tracker struct {
 
 func NewTracker(gitPath string) (*Tracker, error) {
 	ipldDir := path.Join(gitPath, "ipld")
-	err := os.MkdirAll(ipldDir, 0777)
+	err := os.MkdirAll(ipldDir, 0755)
 	if err != nil {
 		return nil, err
 	}
@@ -31,6 +31,19 @@ func NewTracker(gitPath string) (*Tracker, error) {
 	return &Tracker{
 		kv: kv,
 	}, nil
+}
+
+func (t *Tracker) GetRef(refName string) ([]byte, error) {
+	var it badger.KVItem
+	err := t.kv.Get([]byte(refName), &it)
+	if err != nil {
+		return nil, err
+	}
+	return it.Value(), nil
+}
+
+func (t *Tracker) SetRef(refName string, hash []byte) error {
+	return t.kv.Set([]byte(refName), hash)
 }
 
 func (t *Tracker) AddEntry(hash []byte) error {
