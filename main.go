@@ -11,6 +11,7 @@ import (
 	git "gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	"encoding/hex"
+	"github.com/pkg/errors"
 )
 
 func getLocalDir() (string, error) {
@@ -24,6 +25,7 @@ func getLocalDir() (string, error) {
 
 func Main() error {
 	l := log.New(os.Stderr, "", 0)
+	l.Println(os.Args)
 
 	printf := func(format string, a ...interface{}) (n int, err error) {
 		//l.Printf("> "+format, a...)
@@ -77,7 +79,9 @@ func Main() error {
 				return err
 			}
 
-			it.ForEach(func(ref *plumbing.Reference) error {
+			var n int
+			err = it.ForEach(func(ref *plumbing.Reference) error {
+				n++
 				r, err := tracker.GetRef(ref.Name().String())
 				if err != nil {
 					return err
@@ -90,6 +94,24 @@ func Main() error {
 
 				return nil
 			})
+			it.Close()
+			if err != nil {
+				return err
+			}
+
+			if n == 0 && !strings.HasPrefix(command, "list for-push") && len(os.Args) >= 2 {
+				sha, err := hex.DecodeString(os.Args[2])
+				if err != nil {
+					return err
+				}
+				if len(sha) != 20 {
+					return errors.New("invalid hash length")
+				}
+
+				printf("%s %s\n", os.Args[2], "refs/heads/master")
+			}
+
+
 
 			headRef, err := repo.Reference(plumbing.HEAD, false)
 			if err != nil {
