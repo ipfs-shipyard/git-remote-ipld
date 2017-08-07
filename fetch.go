@@ -51,7 +51,7 @@ func (f *Fetch) doWork() error {
 			return fmt.Errorf("fetch: %v", err)
 		}
 
-		c := cid.NewCidV1(0x78, mhash)
+		c := cid.NewCidV1(cid.GitRaw, mhash)
 
 		f.log.Printf("%s %s\r\x1b[A", hash, c.String())
 

@@ -2,16 +2,18 @@ package main
 
 import (
 	"bufio"
+	"encoding/hex"
 	"fmt"
 	"log"
 	"os"
 	"path"
 	"strings"
 
+	cid "github.com/ipfs/go-cid"
+	mh "github.com/multiformats/go-multihash"
+	"github.com/pkg/errors"
 	git "gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/plumbing"
-	"encoding/hex"
-	"github.com/pkg/errors"
 )
 
 func getLocalDir() (string, error) {
@@ -155,7 +157,15 @@ func Main() error {
 			hash := localRef.Hash()
 			tracker.SetRef(refs[1], (&hash)[:])
 
+			mhash, err := mh.FromHexString("1114" + headHash)
+			if err != nil {
+				return fmt.Errorf("fetch: %v", err)
+			}
+
+			c := cid.NewCidV1(cid.GitRaw, mhash)
+
 			l.Printf("Pushed to IPFS as \x1b[32mipld::%s\x1b[39m\n", headHash)
+			l.Printf("Head CID is %s\n", c.String())
 			printf("ok %s\n", refs[0])
 			printf("\n")
 		case strings.HasPrefix(command, "fetch "):

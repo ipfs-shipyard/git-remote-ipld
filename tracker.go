@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/dgraph-io/badger/badger"
+	"github.com/dgraph-io/badger"
 	"path"
 	"os"
 )
@@ -43,11 +43,11 @@ func (t *Tracker) GetRef(refName string) ([]byte, error) {
 }
 
 func (t *Tracker) SetRef(refName string, hash []byte) error {
-	return t.kv.Set([]byte(refName), hash)
+	return t.kv.Set([]byte(refName), hash, 0)
 }
 
 func (t *Tracker) AddEntry(hash []byte) error {
-	return t.kv.Set(hash, []byte{1})
+	return t.kv.Set(hash, []byte{1}, 0)
 }
 
 func (t *Tracker) HasEntry(hash []byte) (bool, error) {
