@@ -9,9 +9,9 @@
   "gxDependencies": [
     {
       "author": "whyrusleeping",
-      "hash": "QmZe3S3sXMWar3oPmrd8jHV8NoAWfPfLGFD8PsK3YrYpqv",
+      "hash": "QmNp85zy9RLrQ5oQD4hPyS39ezrrXpcaa7R4Y9kxdWQLLQ",
       "name": "go-cid",
-      "version": "0.7.13"
+      "version": "0.7.18"
     }
   ],
   "gxVersion": "0.10.0",

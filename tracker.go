@@ -21,7 +21,6 @@ func NewTracker(gitPath string) (*Tracker, error) {
 	opt := badger.DefaultOptions
 	opt.Dir = ipldDir
 	opt.ValueDir = ipldDir
-	opt.ValueGCThreshold = 0
 
 	kv, err := badger.NewKV(&opt)
 	if err != nil {
@@ -39,7 +38,7 @@ func (t *Tracker) GetRef(refName string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return it.Value(), nil
+	return syncBytes(it.Value)
 }
 
 func (t *Tracker) SetRef(refName string, hash []byte) error {
@@ -57,9 +56,20 @@ func (t *Tracker) HasEntry(hash []byte) (bool, error) {
 		return false, err
 	}
 
-	return item.Value() != nil, nil
+	val, err := syncBytes(item.Value)
+	return val != nil, err
 }
 
 func (t *Tracker) Close() error {
 	return t.kv.Close()
+}
+
+func syncBytes(get func(func([]byte) error) error) ([]byte, error) {
+	var out []byte
+	err := get(func(data []byte) error {
+		out = data
+		return nil
+	})
+
+	return out, err
 }
