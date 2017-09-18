@@ -20,13 +20,12 @@ Note that at this stage many features are missing and the code
 is full of bugs and hacks.
 
 ## Instalation
-1. Clone/download the repo
+1. goget/clone/download the repo
 2. `gx-go rw`
 3. `go install`
 4. Done
 5. ???
-6. You will need ipfs with git support in dag commands
-7. This is coming soon
+6. You will need ipfs with git plugin installed
 
 ## License
 MIT
