@@ -2,8 +2,8 @@ package main
 
 import (
 	"github.com/dgraph-io/badger"
-	"path"
 	"os"
+	"path"
 )
 
 //Tracker tracks which hashes are published in IPLD
