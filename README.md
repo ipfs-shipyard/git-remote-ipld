@@ -2,7 +2,7 @@
 
 Push and fetch commits using IPFS!
 
-This helper is very, very experimental as of now
+This helper is experimental as of now
 
 ## Usage
 ```
@@ -16,16 +16,15 @@ Push:
 $ git push ipld::
 ```
 
-Note that at this stage many features are missing and the code
-is full of bugs and hacks.
+Note: Some features like remote tracking are still missing, though the plugin is
+quite usable.
 
-## Instalation
+## Installation
 1. goget/clone/download the repo
-2. `gx-go rw`
-3. `go install`
-4. Done
-5. ???
-6. You will need ipfs with git plugin installed
+2. `make install`
+3. Done
+4. ???
+5. You will need IPFS with Git plugin installed, see https://github.com/ipfs/go-ipfs/blob/master/docs/plugins.md
 
 ## License
 MIT
