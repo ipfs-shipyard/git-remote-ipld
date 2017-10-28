@@ -15,9 +15,9 @@
     },
     {
       "author": "dgraph-io",
-      "hash": "QmTBxwy8cerzXbZQFUwTBCSxx55jUgVzudFcpmnAHUGuPy",
+      "hash": "Qmao4ZjrenhCnyy3vmZ1q4rjvbo7BZtKgWpYujtpbXwJu8",
       "name": "badger",
-      "version": "1.4.0"
+      "version": "2.1.0"
     }
   ],
   "gxVersion": "0.10.0",

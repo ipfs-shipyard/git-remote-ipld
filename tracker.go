@@ -8,7 +8,7 @@ import (
 
 //Tracker tracks which hashes are published in IPLD
 type Tracker struct {
-	kv *badger.KV
+	db *badger.DB
 }
 
 func NewTracker(gitPath string) (*Tracker, error) {
@@ -22,54 +22,71 @@ func NewTracker(gitPath string) (*Tracker, error) {
 	opt.Dir = ipldDir
 	opt.ValueDir = ipldDir
 
-	kv, err := badger.NewKV(&opt)
+	db, err := badger.Open(opt)
 	if err != nil {
 		return nil, err
 	}
 
 	return &Tracker{
-		kv: kv,
+		db: db,
 	}, nil
 }
 
 func (t *Tracker) GetRef(refName string) ([]byte, error) {
-	var it badger.KVItem
-	err := t.kv.Get([]byte(refName), &it)
+	txn := t.db.NewTransaction(false)
+	defer txn.Discard()
+
+	it, err := txn.Get([]byte(refName))
+	if err == badger.ErrKeyNotFound {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}
-	return syncBytes(it.Value)
+
+	return it.Value()
 }
 
 func (t *Tracker) SetRef(refName string, hash []byte) error {
-	return t.kv.Set([]byte(refName), hash, 0)
+	txn := t.db.NewTransaction(true)
+	defer txn.Discard()
+
+	err := txn.Set([]byte(refName), hash, 0)
+	if err != nil {
+		return err
+	}
+
+	return txn.Commit(nil)
 }
 
 func (t *Tracker) AddEntry(hash []byte) error {
-	return t.kv.Set(hash, []byte{1}, 0)
+	txn := t.db.NewTransaction(true)
+	defer txn.Discard()
+
+	err := txn.Set([]byte(hash), []byte{}, 1)
+	if err != nil {
+		return err
+	}
+
+	return txn.Commit(nil)
 }
 
 func (t *Tracker) HasEntry(hash []byte) (bool, error) {
-	var item badger.KVItem
-	err := t.kv.Get(hash, &item)
+	txn := t.db.NewTransaction(false)
+	defer txn.Discard()
+
+	it, err := txn.Get(hash)
+	if err == badger.ErrKeyNotFound {
+		return false, nil
+	}
 	if err != nil {
 		return false, err
 	}
+	it.UserMeta()
 
-	val, err := syncBytes(item.Value)
-	return val != nil, err
+	return true, nil
 }
 
 func (t *Tracker) Close() error {
-	return t.kv.Close()
-}
-
-func syncBytes(get func(func([]byte) error) error) ([]byte, error) {
-	var out []byte
-	err := get(func(data []byte) error {
-		out = data
-		return nil
-	})
-
-	return out, err
+	return t.db.Close()
 }

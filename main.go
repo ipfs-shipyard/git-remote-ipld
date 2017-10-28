@@ -198,6 +198,7 @@ func Main() error {
 
 func main() {
 	if err := Main(); err != nil {
+		fmt.Fprintf(os.Stderr, "\x1b[K")
 		log.Fatal(err)
 	}
 }
