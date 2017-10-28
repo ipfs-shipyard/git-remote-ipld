@@ -26,5 +26,11 @@ quite usable.
 4. ???
 5. You will need IPFS with Git plugin installed, see https://github.com/ipfs/go-ipfs/blob/master/docs/plugins.md
 
+# Troubleshooting
+* `fetch: manifest has unsupported version: 2 (we support 3)` on any command
+  - This usually means that tracker data format has changed
+  - Simply do `rm -rf .git/ipld`
+* `command something something EOF`
+  - You don't have git IPFS plugin properly installed, see step 5 of installation.
 ## License
 MIT
