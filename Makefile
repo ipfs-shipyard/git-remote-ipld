@@ -9,7 +9,7 @@ deps: gx
 	gx --verbose install --global
 	gx-go rewrite
 
-install: build
+install: all
 	go install
 
 .PHONY: all gx deps install
