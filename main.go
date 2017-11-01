@@ -17,7 +17,8 @@ import (
 )
 
 const (
-	PROTO_PREFIX = "ipld://"
+	IPLD_PREFIX = "ipld://"
+	IPFS_PREFIX = "ipfs://"
 )
 
 func getLocalDir() (string, error) {
@@ -66,8 +67,8 @@ func Main() error {
 	stdinReader := bufio.NewReader(os.Stdin)
 
 	hashArg := os.Args[2]
-	if strings.HasPrefix(hashArg, PROTO_PREFIX) {
-		hashArg = hashArg[len(PROTO_PREFIX):]
+	if strings.HasPrefix(hashArg, IPLD_PREFIX) || strings.HasPrefix(hashArg, IPFS_PREFIX) {
+		hashArg = hashArg[len(IPLD_PREFIX):]
 	}
 
 	for {
