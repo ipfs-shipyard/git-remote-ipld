@@ -16,6 +16,10 @@ import (
 	"gopkg.in/src-d/go-git.v4/plumbing"
 )
 
+const (
+	PROTO_PREFIX = "ipld://"
+)
+
 func getLocalDir() (string, error) {
 	localdir := path.Join(os.Getenv("GIT_DIR"))
 
@@ -61,6 +65,11 @@ func Main() error {
 
 	stdinReader := bufio.NewReader(os.Stdin)
 
+	hashArg := os.Args[2]
+	if strings.HasPrefix(hashArg, PROTO_PREFIX) {
+		hashArg = hashArg[len(PROTO_PREFIX):]
+	}
+
 	for {
 		command, err := stdinReader.ReadString('\n')
 		if err != nil {
@@ -98,7 +107,7 @@ func Main() error {
 				}
 
 				if !strings.HasPrefix(command, "list for-push") && headRef.Target() == ref.Name() && headRef.Type() == plumbing.SymbolicReference && len(os.Args) >= 3 {
-					sha, err := hex.DecodeString(os.Args[2])
+					sha, err := hex.DecodeString(hashArg)
 					if err != nil {
 						return err
 					}
@@ -106,7 +115,7 @@ func Main() error {
 						return errors.New("invalid hash length")
 					}
 
-					printf("%s %s\n", os.Args[2], headRef.Target().String())
+					printf("%s %s\n", hashArg, headRef.Target().String())
 				} else {
 					printf("%s %s\n", hex.EncodeToString(r), ref.Name())
 				}
@@ -119,7 +128,7 @@ func Main() error {
 			}
 
 			if n == 0 && !strings.HasPrefix(command, "list for-push") && len(os.Args) >= 3 {
-				sha, err := hex.DecodeString(os.Args[2])
+				sha, err := hex.DecodeString(hashArg)
 				if err != nil {
 					return err
 				}
@@ -127,7 +136,7 @@ func Main() error {
 					return errors.New("invalid hash length")
 				}
 
-				printf("%s %s\n", os.Args[2], "refs/heads/master")
+				printf("%s %s\n", hashArg, "refs/heads/master")
 			}
 
 			switch headRef.Type() {
