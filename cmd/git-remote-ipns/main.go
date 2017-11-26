@@ -26,10 +26,11 @@ func Main() error {
 		hashArg = hashArg[len(IPNS_PREFIX):]
 	}
 
-	_, err := core.NewRemote()
+	remote, err := core.NewRemote()
 	if err != nil {
 		return err
 	}
+	defer remote.Close()
 
 	for {
 		command, err := stdinReader.ReadString('\n')

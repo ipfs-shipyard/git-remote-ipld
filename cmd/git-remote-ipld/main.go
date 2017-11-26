@@ -36,6 +36,7 @@ func Main() error {
 	if err != nil {
 		return err
 	}
+	defer remote.Close()
 
 	for {
 		command, err := stdinReader.ReadString('\n')

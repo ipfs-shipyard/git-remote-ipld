@@ -37,7 +37,6 @@ func NewRemote() (*Remote, error) {
 	if err != nil {
 		return nil, fmt.Errorf("fetch: %v", err)
 	}
-	defer tracker.Close()
 
 	return &Remote{
 		Logger:   log.New(os.Stderr, "", 0),
@@ -59,4 +58,8 @@ func (r *Remote) NewPush() *Push {
 
 func (r *Remote) NewFetch() *Fetch {
 	return NewFetch(r.localDir, r.Tracker)
+}
+
+func (r *Remote) Close() error {
+	return r.Tracker.Close()
 }
