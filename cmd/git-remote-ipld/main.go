@@ -6,15 +6,13 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"path"
 	"strings"
 
-	cid "github.com/ipfs/go-cid"
 	"github.com/magik6k/git-remote-ipld/core"
-	mh "github.com/multiformats/go-multihash"
-	"github.com/pkg/errors"
-	git "gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/plumbing"
+	cid "gx/ipfs/QmNp85zy9RLrQ5oQD4hPyS39ezrrXpcaa7R4Y9kxdWQLLQ/go-cid"
+	mh "gx/ipfs/QmU9a9NV9RdPNwZQDYd5uKsm6N6LJLSvLbywDDYFbaaC6P/go-multihash"
+	"gx/ipfs/QmVmDhyTTUcQXFD1rRQ64fGLMSAoaQvNH3hwuaCFAPq2hy/errors"
 )
 
 const (
@@ -22,54 +20,21 @@ const (
 	IPFS_PREFIX = "ipfs://"
 )
 
-func getLocalDir() (string, error) {
-	localdir := path.Join(os.Getenv("GIT_DIR"))
-
-	if err := os.MkdirAll(localdir, 0755); err != nil {
-		return "", err
-	}
-	return localdir, nil
-}
-
 func Main() error {
-	l := log.New(os.Stderr, "", 0)
-	//l.Println(os.Args)
-
-	printf := func(format string, a ...interface{}) (n int, err error) {
-		//l.Printf("> "+format, a...)
-		return fmt.Printf(format, a...)
-	}
-
 	if len(os.Args) < 3 {
 		return fmt.Errorf("Usage: git-remote-ipld remote-name url")
 	}
-
-	localDir, err := getLocalDir()
-	if err != nil {
-		return err
-	}
-
-	repo, err := git.PlainOpen(localDir)
-	if err == git.ErrWorktreeNotProvided {
-		repoRoot, _ := path.Split(localDir)
-
-		repo, err = git.PlainOpen(repoRoot)
-		if err != nil {
-			return err
-		}
-	}
-
-	tracker, err := core.NewTracker(localDir)
-	if err != nil {
-		return fmt.Errorf("fetch: %v", err)
-	}
-	defer tracker.Close()
 
 	stdinReader := bufio.NewReader(os.Stdin)
 
 	hashArg := os.Args[2]
 	if strings.HasPrefix(hashArg, IPLD_PREFIX) || strings.HasPrefix(hashArg, IPFS_PREFIX) {
 		hashArg = hashArg[len(IPLD_PREFIX):]
+	}
+
+	remote, err := core.NewRemote()
+	if err != nil {
+		return err
 	}
 
 	for {
@@ -80,19 +45,19 @@ func Main() error {
 
 		command = strings.Trim(command, "\n")
 
-		//l.Printf("< %s", command)
+		remote.Logger.Printf("< %s", command)
 		switch {
 		case command == "capabilities":
-			printf("push\n")
-			printf("fetch\n")
-			printf("\n")
+			remote.Printf("push\n")
+			remote.Printf("fetch\n")
+			remote.Printf("\n")
 		case strings.HasPrefix(command, "list"):
-			headRef, err := repo.Reference(plumbing.HEAD, false)
+			headRef, err := remote.Repo.Reference(plumbing.HEAD, false)
 			if err != nil {
 				return err
 			}
 
-			it, err := repo.Branches()
+			it, err := remote.Repo.Branches()
 			if err != nil {
 				return err
 			}
@@ -100,7 +65,7 @@ func Main() error {
 			var n int
 			err = it.ForEach(func(ref *plumbing.Reference) error {
 				n++
-				r, err := tracker.GetRef(ref.Name().String())
+				r, err := remote.Tracker.GetRef(ref.Name().String())
 				if err != nil {
 					return err
 				}
@@ -117,9 +82,9 @@ func Main() error {
 						return errors.New("invalid hash length")
 					}
 
-					printf("%s %s\n", hashArg, headRef.Target().String())
+					remote.Printf("%s %s\n", hashArg, headRef.Target().String())
 				} else {
-					printf("%s %s\n", hex.EncodeToString(r), ref.Name())
+					remote.Printf("%s %s\n", hex.EncodeToString(r), ref.Name())
 				}
 
 				return nil
@@ -138,35 +103,35 @@ func Main() error {
 					return errors.New("invalid hash length")
 				}
 
-				printf("%s %s\n", hashArg, "refs/heads/master")
+				remote.Printf("%s %s\n", hashArg, "refs/heads/master")
 			}
 
 			switch headRef.Type() {
 			case plumbing.HashReference:
-				printf("%s %s\n", headRef.Hash(), headRef.Name())
+				remote.Printf("%s %s\n", headRef.Hash(), headRef.Name())
 			case plumbing.SymbolicReference:
-				printf("@%s %s\n", headRef.Target().String(), headRef.Name())
+				remote.Printf("@%s %s\n", headRef.Target().String(), headRef.Name())
 			}
 
-			printf("\n")
+			remote.Printf("\n")
 		case strings.HasPrefix(command, "push "):
 			refs := strings.Split(command[5:], ":")
 
-			localRef, err := repo.Reference(plumbing.ReferenceName(refs[0]), true)
+			localRef, err := remote.Repo.Reference(plumbing.ReferenceName(refs[0]), true)
 			if err != nil {
 				return fmt.Errorf("command push: %v", err)
 			}
 
 			headHash := localRef.Hash().String()
 
-			push := core.NewPush(localDir, tracker, repo)
+			push := remote.NewPush()
 			err = push.PushHash(headHash)
 			if err != nil {
 				return fmt.Errorf("command push: %v", err)
 			}
 
 			hash := localRef.Hash()
-			tracker.SetRef(refs[1], (&hash)[:])
+			remote.Tracker.SetRef(refs[1], (&hash)[:])
 
 			mhash, err := mh.FromHexString("1114" + headHash)
 			if err != nil {
@@ -175,14 +140,14 @@ func Main() error {
 
 			c := cid.NewCidV1(cid.GitRaw, mhash)
 
-			l.Printf("Pushed to IPFS as \x1b[32mipld::%s\x1b[39m\n", headHash)
-			l.Printf("Head CID is %s\n", c.String())
-			printf("ok %s\n", refs[0])
-			printf("\n")
+			remote.Logger.Printf("Pushed to IPFS as \x1b[32mipld::%s\x1b[39m\n", headHash)
+			remote.Logger.Printf("Head CID is %s\n", c.String())
+			remote.Printf("ok %s\n", refs[0])
+			remote.Printf("\n")
 		case strings.HasPrefix(command, "fetch "):
 			parts := strings.Split(command, " ")
 
-			fetch := core.NewFetch(localDir, tracker)
+			fetch := remote.NewFetch()
 			err := fetch.FetchHash(parts[1])
 			if err != nil {
 				return fmt.Errorf("command fetch: %v", err)
@@ -193,9 +158,9 @@ func Main() error {
 				return fmt.Errorf("push: %v", err)
 			}
 
-			tracker.SetRef(parts[2], sha)
+			remote.Tracker.SetRef(parts[2], sha)
 
-			printf("\n")
+			remote.Printf("\n")
 		case command == "\n":
 			return nil
 		case command == "":

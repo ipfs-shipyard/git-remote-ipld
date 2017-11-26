@@ -1,7 +1,7 @@
 package core
 
 import (
-	"github.com/dgraph-io/badger"
+	"gx/ipfs/Qmao4ZjrenhCnyy3vmZ1q4rjvbo7BZtKgWpYujtpbXwJu8/badger"
 	"os"
 	"path"
 )
