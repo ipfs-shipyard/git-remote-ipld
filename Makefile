@@ -1,5 +1,5 @@
 all: deps
-	go build ./...
+	go build -o cmd/git-remote-ipld/git-remote-ipld ./cmd/git-remote-ipld/...
 
 gx:
 	go get github.com/whyrusleeping/gx
@@ -10,6 +10,6 @@ deps: gx
 	gx-go rewrite
 
 install: all
-	go install
+	go install -v ./cmd/git-remote-ipld/...
 
 .PHONY: all gx deps install
