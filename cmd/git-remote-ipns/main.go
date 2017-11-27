@@ -1,12 +1,10 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"log"
 	"os"
 	"strings"
-
 	"github.com/magik6k/git-remote-ipld/core"
 )
 
@@ -16,32 +14,20 @@ const (
 
 func Main() error {
 	if len(os.Args) < 3 {
-		return fmt.Errorf("Usage: git-remote-ipld remote-name url")
+		return fmt.Errorf("Usage: git-remote-ipns remote-name url")
 	}
 
-	stdinReader := bufio.NewReader(os.Stdin)
-
-	hashArg := os.Args[2]
-	if strings.HasPrefix(hashArg, IPNS_PREFIX) {
-		hashArg = hashArg[len(IPNS_PREFIX):]
+	remoteName := os.Args[2]
+	if strings.HasPrefix(remoteName, IPNS_PREFIX) {
+		remoteName = remoteName[len(IPNS_PREFIX):]
 	}
 
-	remote, err := core.NewRemote()
+	remote, err := core.NewRemote(&IpnsHandler{remoteName:remoteName})
 	if err != nil {
 		return err
 	}
 	defer remote.Close()
-
-	for {
-		command, err := stdinReader.ReadString('\n')
-		if err != nil {
-			return err
-		}
-
-		command = strings.Trim(command, "\n")
-
-	}
-	return nil
+	return remote.ProcessCommands()
 }
 
 func main() {

@@ -48,7 +48,7 @@ func (p *Push) PushHash(hash string) error {
 }
 
 func (p *Push) doWork() error {
-	api := ipfs.NewShell("localhost:5001") //todo: config
+	api := ipfs.NewLocalShell()
 
 	for e := p.todo.Front(); e != nil; e = e.Next() {
 		hash := e.Value.(string)

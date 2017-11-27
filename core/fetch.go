@@ -41,7 +41,7 @@ func (f *Fetch) FetchHash(base string) error {
 }
 
 func (f *Fetch) doWork() error {
-	api := ipfs.NewShell("localhost:5001") //todo: config
+	api := ipfs.NewLocalShell()
 
 	for e := f.todo.Front(); e != nil; e = e.Next() {
 		hash := e.Value.(string)
