@@ -14,7 +14,6 @@ import (
 	git "gopkg.in/src-d/go-git.v4"
 
 	"gopkg.in/src-d/go-git.v4/plumbing"
-	cid "gx/ipfs/QmNp85zy9RLrQ5oQD4hPyS39ezrrXpcaa7R4Y9kxdWQLLQ/go-cid"
 	mh "gx/ipfs/QmU9a9NV9RdPNwZQDYd5uKsm6N6LJLSvLbywDDYFbaaC6P/go-multihash"
 )
 
@@ -68,12 +67,10 @@ func (p *Push) doWork() error {
 			continue
 		}
 
-		mhash, err := mh.FromHexString("1114" + hash)
+		expectedCid, err := CidFromHex(hash)
 		if err != nil {
 			return fmt.Errorf("push: %v", err)
 		}
-
-		expectedCid := cid.NewCidV1(0x78, mhash)
 
 		obj, err := p.repo.Storer.EncodedObject(plumbing.AnyObject, plumbing.NewHash(hash))
 		if err != nil {

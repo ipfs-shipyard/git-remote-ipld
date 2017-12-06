@@ -17,7 +17,7 @@ $ git push ipld::
 ```
 
 Note: Some features like remote tracking are still missing, though the plugin is
-quite usable.
+quite usable. IPNS helper is WIP and doesn't yet do what it should
 
 ## Installation
 1. goget/clone/download the repo

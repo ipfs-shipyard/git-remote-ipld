@@ -7,9 +7,6 @@ import (
 	"github.com/magik6k/git-remote-ipld/core"
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	"os"
-
-	cid "gx/ipfs/QmNp85zy9RLrQ5oQD4hPyS39ezrrXpcaa7R4Y9kxdWQLLQ/go-cid"
-	mh "gx/ipfs/QmU9a9NV9RdPNwZQDYd5uKsm6N6LJLSvLbywDDYFbaaC6P/go-multihash"
 )
 
 type IpldHandler struct {
@@ -103,12 +100,10 @@ func (h *IpldHandler) Push(remote *core.Remote, local string, remoteRef string) 
 	hash := localRef.Hash()
 	remote.Tracker.SetRef(remoteRef, (&hash)[:])
 
-	mhash, err := mh.FromHexString("1114" + headHash)
+	c, err := core.CidFromHex(headHash)
 	if err != nil {
-		return nil, fmt.Errorf("fetch: %v", err)
+		return nil, fmt.Errorf("push: %v", err)
 	}
-
-	c := cid.NewCidV1(cid.GitRaw, mhash)
 
 	remote.Logger.Printf("Pushed to IPFS as \x1b[32mipld::%s\x1b[39m\n", headHash)
 	remote.Logger.Printf("Head CID is %s\n", c.String())
