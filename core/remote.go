@@ -14,7 +14,7 @@ import (
 
 type RemoteHandler interface {
 	List(remote *Remote, forPush bool) ([]string, error)
-	Push(remote *Remote, localRef string, remoteRef string) ([]string, error)
+	Push(remote *Remote, localRef string, remoteRef string) (string, error)
 }
 
 type Remote struct {
@@ -25,6 +25,8 @@ type Remote struct {
 	Tracker *Tracker
 
 	Handler RemoteHandler
+
+	todo []func() (string, error)
 }
 
 func NewRemote(handler RemoteHandler) (*Remote, error) {
@@ -56,7 +58,7 @@ func NewRemote(handler RemoteHandler) (*Remote, error) {
 		Tracker: tracker,
 
 		Handler: handler,
-	}, nil
+		}, nil
 }
 
 func (r *Remote) Printf(format string, a ...interface{}) (n int, err error) {
@@ -74,6 +76,35 @@ func (r *Remote) NewFetch() *Fetch {
 
 func (r *Remote) Close() error {
 	return r.Tracker.Close()
+}
+
+func (r *Remote) push(src, dst string, force bool) {
+	r.todo = append(r.todo, func() (string, error) {
+		done, err := r.Handler.Push(r, src, dst)
+		if err != nil {
+			return "", err
+		}
+
+		return fmt.Sprintf("ok %s\n", done), nil
+	})
+}
+
+func (r *Remote) fetch(sha, ref string) {
+	r.todo = append(r.todo, func() (string, error) {
+		fetch := r.NewFetch()
+		err := fetch.FetchHash(sha)
+		if err != nil {
+			return "", fmt.Errorf("command fetch: %v", err)
+		}
+
+		sha, err := hex.DecodeString(sha)
+		if err != nil {
+			return "", fmt.Errorf("fetch: %v", err)
+		}
+
+		r.Tracker.SetRef(ref, sha)
+		return "", nil
+	})
 }
 
 func (r *Remote) ProcessCommands() error {
@@ -103,33 +134,23 @@ func (r *Remote) ProcessCommands() error {
 			r.Printf("\n")
 		case strings.HasPrefix(command, "push "):
 			refs := strings.Split(command[5:], ":")
-			done, err := r.Handler.Push(r, refs[0], refs[1])
-			if err != nil {
-				return err
-			}
-
-			r.Printf("ok %s\n", done[0])
-			r.Printf("\n")
+			r.push(refs[0], refs[1], false) //TODO: parse force
 		case strings.HasPrefix(command, "fetch "):
 			parts := strings.Split(command, " ")
-
-			fetch := r.NewFetch()
-			err := fetch.FetchHash(parts[1])
-			if err != nil {
-				return fmt.Errorf("command fetch: %v", err)
-			}
-
-			sha, err := hex.DecodeString(parts[1])
-			if err != nil {
-				return fmt.Errorf("push: %v", err)
-			}
-
-			r.Tracker.SetRef(parts[2], sha)
-
-			r.Printf("\n")
-		case command == "\n":
-			return nil
+			r.fetch(parts[1], parts[2])
 		case command == "":
+			fallthrough
+		case command == "\n":
+			r.Logger.Println("Processsing tasks")
+			for _, task := range r.todo {
+				resp, err := task()
+				if err != nil {
+					return err
+				}
+				r.Printf("%s", resp)
+			}
+			r.Printf("\n")
+			r.todo = nil
 			return nil
 		default:
 			return fmt.Errorf("received unknown command %q", command)

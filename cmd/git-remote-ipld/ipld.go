@@ -83,10 +83,10 @@ func (h *IpldHandler) List(remote *core.Remote, forPush bool) ([]string, error) 
 	return out, nil
 }
 
-func (h *IpldHandler) Push(remote *core.Remote, local string, remoteRef string) ([]string, error) {
+func (h *IpldHandler) Push(remote *core.Remote, local string, remoteRef string) (string, error) {
 	localRef, err := remote.Repo.Reference(plumbing.ReferenceName(local), true)
 	if err != nil {
-		return nil, fmt.Errorf("command push: %v", err)
+		return "", fmt.Errorf("command push: %v", err)
 	}
 
 	headHash := localRef.Hash().String()
@@ -94,7 +94,7 @@ func (h *IpldHandler) Push(remote *core.Remote, local string, remoteRef string) 
 	push := remote.NewPush()
 	err = push.PushHash(headHash)
 	if err != nil {
-		return nil, fmt.Errorf("command push: %v", err)
+		return "", fmt.Errorf("command push: %v", err)
 	}
 
 	hash := localRef.Hash()
@@ -102,10 +102,10 @@ func (h *IpldHandler) Push(remote *core.Remote, local string, remoteRef string) 
 
 	c, err := core.CidFromHex(headHash)
 	if err != nil {
-		return nil, fmt.Errorf("push: %v", err)
+		return "", fmt.Errorf("push: %v", err)
 	}
 
 	remote.Logger.Printf("Pushed to IPFS as \x1b[32mipld::%s\x1b[39m\n", headHash)
 	remote.Logger.Printf("Head CID is %s\n", c.String())
-	return []string{local}, nil
+	return local, nil
 }

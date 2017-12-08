@@ -89,12 +89,12 @@ func (h *IpnsHandler) List(remote *core.Remote, forPush bool) ([]string, error) 
 	return out, nil
 }
 
-func (h *IpnsHandler) Push(remote *core.Remote, local string, remoteRef string) ([]string, error) {
+func (h *IpnsHandler) Push(remote *core.Remote, local string, remoteRef string) (string, error) {
 	api := ipfs.NewLocalShell()
 
 	localRef, err := remote.Repo.Reference(plumbing.ReferenceName(local), true)
 	if err != nil {
-		return nil, fmt.Errorf("command push: %v", err)
+		return "", fmt.Errorf("command push: %v", err)
 	}
 
 	headHash := localRef.Hash().String()
@@ -102,7 +102,7 @@ func (h *IpnsHandler) Push(remote *core.Remote, local string, remoteRef string) 
 	push := remote.NewPush()
 	err = push.PushHash(headHash)
 	if err != nil {
-		return nil, fmt.Errorf("command push: %v", err)
+		return "", fmt.Errorf("command push: %v", err)
 	}
 
 	hash := localRef.Hash()
@@ -110,34 +110,34 @@ func (h *IpnsHandler) Push(remote *core.Remote, local string, remoteRef string) 
 
 	c, err := core.CidFromHex(headHash)
 	if err != nil {
-		return nil, fmt.Errorf("push: %v", err)
+		return "", fmt.Errorf("push: %v", err)
 	}
 
 	//patch object
 	res, err := api.PatchLink(h.remoteName, remoteRef, c.String(), true)
 	if err != nil {
-		return nil, fmt.Errorf("push: %v", err)
+		return "", fmt.Errorf("push: %v", err)
 	}
 
 	head, err := h.getRef(api, "HEAD")
 	if err != nil {
-		return nil, fmt.Errorf("push: %v", err)
+		return "", fmt.Errorf("push: %v", err)
 	}
 	if head == "" {
 		headRef, err := api.Add(strings.NewReader("refs/heads/master")) //TODO: Make this smarter?
 		if err != nil {
-			return nil, fmt.Errorf("push: %v", err)
+			return "", fmt.Errorf("push: %v", err)
 		}
 
 		res, err = api.PatchLink(res, "HEAD", headRef, true)
 		if err != nil {
-			return nil, fmt.Errorf("push: %v", err)
+			return "", fmt.Errorf("push: %v", err)
 		}
 	}
 
 	remote.Logger.Printf("Pushed to IPFS as \x1b[32mipns::%s\x1b[39m\n", res)
 
-	return []string{local}, nil
+	return local, nil
 }
 
 func (h *IpnsHandler) getRef(api *ipfs.Shell, name string) (string, error) {
