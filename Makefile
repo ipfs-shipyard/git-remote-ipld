@@ -9,6 +9,7 @@ gx:
 deps: gx
 	gx --verbose install --global
 	gx-go rewrite
+	go get ./...
 
 install: all
 	go install -v ./cmd/git-remote-ipld/...
