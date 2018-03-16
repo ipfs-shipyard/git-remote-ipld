@@ -2,17 +2,18 @@ package main
 
 import (
 	"fmt"
+	"github.com/magik6k/git-remote-ipld/core"
+	"io"
 	"log"
 	"os"
 	"strings"
-	"github.com/magik6k/git-remote-ipld/core"
 )
 
 const (
 	IPNS_PREFIX = "ipns://"
 )
 
-func Main() error {
+func Main(reader io.Reader, writer io.Writer, logger *log.Logger) error {
 	if len(os.Args) < 3 {
 		return fmt.Errorf("Usage: git-remote-ipns remote-name url")
 	}
@@ -22,7 +23,7 @@ func Main() error {
 		remoteName = remoteName[len(IPNS_PREFIX):]
 	}
 
-	remote, err := core.NewRemote(&IpnsHandler{remoteName:remoteName})
+	remote, err := core.NewRemote(&IpnsHandler{remoteName: remoteName}, reader, writer, logger)
 	if err != nil {
 		return err
 	}
@@ -31,7 +32,7 @@ func Main() error {
 }
 
 func main() {
-	if err := Main(); err != nil {
+	if err := Main(nil, nil, nil); err != nil {
 		fmt.Fprintf(os.Stderr, "\x1b[K")
 		log.Fatal(err)
 	}

@@ -1,0 +1,8 @@
+0000000000000000000000000000000000000000 d5b0d08c180fd7a9bf4f684a37e60ceeb4d25ec8 Dirk McCormick <dirkmdev@gmail.com> 1517945658 -0500	commit (initial): Say hello
+d5b0d08c180fd7a9bf4f684a37e60ceeb4d25ec8 d5b0d08c180fd7a9bf4f684a37e60ceeb4d25ec8 Dirk McCormick <dirkmdev@gmail.com> 1517945683 -0500	checkout: moving from master to french
+d5b0d08c180fd7a9bf4f684a37e60ceeb4d25ec8 31f087b9bf39d5bcbba5d4e80b2b4ff19a71dc00 Dirk McCormick <dirkmdev@gmail.com> 1517945712 -0500	commit: English -> French
+31f087b9bf39d5bcbba5d4e80b2b4ff19a71dc00 162429cc0dac923dff140ec29247f42a8e362419 Dirk McCormick <dirkmdev@gmail.com> 1517945735 -0500	commit: goodbye.txt
+162429cc0dac923dff140ec29247f42a8e362419 d5b0d08c180fd7a9bf4f684a37e60ceeb4d25ec8 Dirk McCormick <dirkmdev@gmail.com> 1517945739 -0500	checkout: moving from french to master
+d5b0d08c180fd7a9bf4f684a37e60ceeb4d25ec8 d5b0d08c180fd7a9bf4f684a37e60ceeb4d25ec8 Dirk McCormick <dirkmdev@gmail.com> 1517945747 -0500	checkout: moving from master to italian
+d5b0d08c180fd7a9bf4f684a37e60ceeb4d25ec8 78a77abd233c24d8e6a0d0d040c79ae569fc7a19 Dirk McCormick <dirkmdev@gmail.com> 1517945768 -0500	commit: English -> Italian
+78a77abd233c24d8e6a0d0d040c79ae569fc7a19 d5b0d08c180fd7a9bf4f684a37e60ceeb4d25ec8 Dirk McCormick <dirkmdev@gmail.com> 1517945774 -0500	checkout: moving from italian to master
