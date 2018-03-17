@@ -1,17 +1,17 @@
 package main
 
 import (
-	"path"
 	"fmt"
+	"path"
 	"strings"
 
 	ipfs "github.com/ipfs/go-ipfs-api"
 	"github.com/magik6k/git-remote-ipld/core"
 
-	cid "gx/ipfs/QmNp85zy9RLrQ5oQD4hPyS39ezrrXpcaa7R4Y9kxdWQLLQ/go-cid"
-	"gopkg.in/src-d/go-git.v4/plumbing"
-	"encoding/hex"
 	"bytes"
+	"encoding/hex"
+	"gopkg.in/src-d/go-git.v4/plumbing"
+	cid "gx/ipfs/QmNp85zy9RLrQ5oQD4hPyS39ezrrXpcaa7R4Y9kxdWQLLQ/go-cid"
 )
 
 const (
@@ -20,7 +20,7 @@ const (
 )
 
 type refPath struct {
-	path string
+	path  string
 	rType int
 
 	hash string

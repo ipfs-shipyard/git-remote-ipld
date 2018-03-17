@@ -6,12 +6,13 @@ import (
 	"fmt"
 	"github.com/magik6k/git-remote-ipld/core"
 	"gopkg.in/src-d/go-git.v4/plumbing"
-	"os"
 )
 
 type IpldHandler struct {
-	// remoteHash is hash form remote name
+	// remoteHash is hash from remote name
 	remoteHash string
+	// command line arguments
+	osArgs []string
 }
 
 func (h *IpldHandler) List(remote *core.Remote, forPush bool) ([]string, error) {
@@ -38,7 +39,7 @@ func (h *IpldHandler) List(remote *core.Remote, forPush bool) ([]string, error) 
 		}
 
 		// pull ipld::hash, we only want to update HEAD
-		if !forPush && headRef.Target() == ref.Name() && headRef.Type() == plumbing.SymbolicReference && len(os.Args) >= 3 {
+		if !forPush && headRef.Target() == ref.Name() && headRef.Type() == plumbing.SymbolicReference && len(h.osArgs) >= 3 {
 			sha, err := hex.DecodeString(h.remoteHash)
 			if err != nil {
 				return err
@@ -61,7 +62,7 @@ func (h *IpldHandler) List(remote *core.Remote, forPush bool) ([]string, error) 
 	}
 
 	// For clone
-	if n == 0 && !forPush && len(os.Args) >= 3 {
+	if n == 0 && !forPush && len(h.osArgs) >= 3 {
 		sha, err := hex.DecodeString(h.remoteHash)
 		if err != nil {
 			return nil, err

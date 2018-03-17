@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/hex"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"path"
@@ -18,6 +19,8 @@ type RemoteHandler interface {
 }
 
 type Remote struct {
+	reader   io.Reader
+	writer   io.Writer
 	Logger   *log.Logger
 	localDir string
 
@@ -29,7 +32,7 @@ type Remote struct {
 	todo []func() (string, error)
 }
 
-func NewRemote(handler RemoteHandler) (*Remote, error) {
+func NewRemote(handler RemoteHandler, reader io.Reader, writer io.Writer, logger *log.Logger) (*Remote, error) {
 	localDir, err := GetLocalDir()
 	if err != nil {
 		return nil, err
@@ -50,20 +53,32 @@ func NewRemote(handler RemoteHandler) (*Remote, error) {
 		return nil, fmt.Errorf("fetch: %v", err)
 	}
 
+	if reader == nil {
+		reader = os.Stdin
+	}
+	if writer == nil {
+		writer = os.Stdout
+	}
+	if logger == nil {
+		logger = log.New(os.Stderr, "", 0)
+	}
+
 	return &Remote{
-		Logger:   log.New(os.Stderr, "", 0),
+		reader:   reader,
+		writer:   writer,
+		Logger:   logger,
 		localDir: localDir,
 
 		Repo:    repo,
 		Tracker: tracker,
 
 		Handler: handler,
-		}, nil
+	}, nil
 }
 
 func (r *Remote) Printf(format string, a ...interface{}) (n int, err error) {
 	r.Logger.Printf("> "+format, a...)
-	return fmt.Printf(format, a...)
+	return fmt.Fprintf(r.writer, format, a...)
 }
 
 func (r *Remote) NewPush() *Push {
@@ -108,9 +123,9 @@ func (r *Remote) fetch(sha, ref string) {
 }
 
 func (r *Remote) ProcessCommands() error {
-	stdinReader := bufio.NewReader(os.Stdin)
+	reader := bufio.NewReader(r.reader)
 	for {
-		command, err := stdinReader.ReadString('\n')
+		command, err := reader.ReadString('\n')
 		if err != nil {
 			return err
 		}
@@ -141,7 +156,7 @@ func (r *Remote) ProcessCommands() error {
 		case command == "":
 			fallthrough
 		case command == "\n":
-			r.Logger.Println("Processsing tasks")
+			r.Logger.Println("Processing tasks")
 			for _, task := range r.todo {
 				resp, err := task()
 				if err != nil {

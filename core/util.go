@@ -6,9 +6,9 @@ import (
 	"os"
 	"path"
 
+	"fmt"
 	cid "gx/ipfs/QmNp85zy9RLrQ5oQD4hPyS39ezrrXpcaa7R4Y9kxdWQLLQ/go-cid"
 	mh "gx/ipfs/QmU9a9NV9RdPNwZQDYd5uKsm6N6LJLSvLbywDDYFbaaC6P/go-multihash"
-	"fmt"
 )
 
 func compressObject(in []byte) []byte {
