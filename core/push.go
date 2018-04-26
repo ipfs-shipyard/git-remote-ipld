@@ -15,6 +15,7 @@ import (
 
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	mh "gx/ipfs/QmU9a9NV9RdPNwZQDYd5uKsm6N6LJLSvLbywDDYFbaaC6P/go-multihash"
+	cid "gx/ipfs/QmNp85zy9RLrQ5oQD4hPyS39ezrrXpcaa7R4Y9kxdWQLLQ/go-cid"
 )
 
 type Push struct {
@@ -27,6 +28,8 @@ type Push struct {
 	log     *log.Logger
 	tracker *Tracker
 	repo    *git.Repository
+
+	NewNode func(hash *cid.Cid, data []byte) error
 }
 
 func NewPush(gitDir string, tracker *Tracker, repo *git.Repository) *Push {
@@ -113,6 +116,12 @@ func (p *Push) doWork() error {
 
 		if expectedCid.String() != res {
 			return fmt.Errorf("CIDs don't match: expected %s, got %s", expectedCid.String(), res)
+		}
+
+		if p.NewNode != nil {
+			if err := p.NewNode(expectedCid, raw); err != nil {
+				return err
+			}
 		}
 
 		p.processLinks(raw)

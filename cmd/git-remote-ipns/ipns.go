@@ -11,7 +11,8 @@ import (
 	"bytes"
 	"encoding/hex"
 	"gopkg.in/src-d/go-git.v4/plumbing"
-	cid "gx/ipfs/QmNp85zy9RLrQ5oQD4hPyS39ezrrXpcaa7R4Y9kxdWQLLQ/go-cid"
+
+	"gx/ipfs/QmNp85zy9RLrQ5oQD4hPyS39ezrrXpcaa7R4Y9kxdWQLLQ/go-cid"
 )
 
 const (
@@ -113,6 +114,8 @@ func (h *IpnsHandler) Push(remote *core.Remote, local string, remoteRef string) 
 	headHash := localRef.Hash().String()
 
 	push := remote.NewPush()
+	push.NewNode = h.bigNodePatcher(api)
+
 	err = push.PushHash(headHash)
 	if err != nil {
 		return "", fmt.Errorf("command push: %v", err)
@@ -127,7 +130,7 @@ func (h *IpnsHandler) Push(remote *core.Remote, local string, remoteRef string) 
 	}
 
 	//patch object
-	res, err := api.PatchLink(h.currentHash, remoteRef, c.String(), true)
+	h.currentHash, err = api.PatchLink(h.currentHash, remoteRef, c.String(), true)
 	if err != nil {
 		return "", fmt.Errorf("push: %v", err)
 	}
@@ -142,15 +145,33 @@ func (h *IpnsHandler) Push(remote *core.Remote, local string, remoteRef string) 
 			return "", fmt.Errorf("push: %v", err)
 		}
 
-		res, err = api.PatchLink(res, "HEAD", headRef, true)
+		h.currentHash, err = api.PatchLink(h.currentHash, "HEAD", headRef, true)
 		if err != nil {
 			return "", fmt.Errorf("push: %v", err)
 		}
 	}
 
-	h.currentHash = res
-
 	return local, nil
+}
+
+// bigNodePatcher returns a function which patches large object mapping into
+// the resulting object
+func (h *IpnsHandler) bigNodePatcher(api *ipfs.Shell) func(*cid.Cid, []byte) error {
+	return func(hash *cid.Cid, data []byte) error {
+		if len(data) > (1 << 21) {
+			c, err := api.Add(bytes.NewReader(data))
+			if err != nil {
+				return err
+			}
+
+			h.currentHash, err = api.PatchLink(h.currentHash, "objects/" + hash.String(), c, true)
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
+	}
 }
 
 func (h *IpnsHandler) getRef(api *ipfs.Shell, name string) (string, error) {
