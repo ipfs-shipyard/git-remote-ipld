@@ -17,8 +17,8 @@ type RemoteHandler interface {
 	List(remote *Remote, forPush bool) ([]string, error)
 	Push(remote *Remote, localRef string, remoteRef string) (string, error)
 
-	Initialize() error
-	Finish() error
+	Initialize(remote *Remote) error
+	Finish(remote *Remote) error
 }
 
 type Remote struct {
@@ -78,7 +78,7 @@ func NewRemote(handler RemoteHandler, reader io.Reader, writer io.Writer, logger
 		Handler: handler,
 	}
 
-	if err := handler.Initialize(); err != nil {
+	if err := handler.Initialize(remote); err != nil {
 		return nil, err
 	}
 
@@ -182,5 +182,5 @@ loop:
 		}
 	}
 
-	return r.Handler.Finish()
+	return r.Handler.Finish(r)
 }

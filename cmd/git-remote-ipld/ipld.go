@@ -111,10 +111,10 @@ func (h *IpldHandler) Push(remote *core.Remote, local string, remoteRef string) 
 	return local, nil
 }
 
-func (h *IpldHandler) Initialize() error {
+func (h *IpldHandler) Initialize(remote *core.Remote) error {
 	return nil
 }
 
-func (h *IpldHandler) Finish() error {
+func (h *IpldHandler) Finish(remote *core.Remote) error {
 	return nil
 }

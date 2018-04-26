@@ -31,13 +31,15 @@ type IpnsHandler struct {
 	currentHash string
 }
 
-func (h *IpnsHandler) Initialize() error {
+func (h *IpnsHandler) Initialize(remote *core.Remote) error {
 	h.currentHash = h.remoteName
 	return nil
 }
 
-func (h *IpnsHandler) Finish() error {
+func (h *IpnsHandler) Finish(remote *core.Remote) error {
 	//TODO: publish
+
+	remote.Logger.Printf("Pushed to IPFS as \x1b[32mipns::%s\x1b[39m\n", h.currentHash)
 	return nil
 }
 
@@ -147,7 +149,6 @@ func (h *IpnsHandler) Push(remote *core.Remote, local string, remoteRef string) 
 	}
 
 	h.currentHash = res
-	remote.Logger.Printf("Pushed to IPFS as \x1b[32mipns::%s\x1b[39m\n", res)
 
 	return local, nil
 }
