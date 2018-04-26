@@ -110,3 +110,11 @@ func (h *IpldHandler) Push(remote *core.Remote, local string, remoteRef string) 
 	remote.Logger.Printf("Head CID is %s\n", c.String())
 	return local, nil
 }
+
+func (h *IpldHandler) Initialize() error {
+	return nil
+}
+
+func (h *IpldHandler) Finish() error {
+	return nil
+}
