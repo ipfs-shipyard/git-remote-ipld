@@ -16,6 +16,9 @@ import (
 type RemoteHandler interface {
 	List(remote *Remote, forPush bool) ([]string, error)
 	Push(remote *Remote, localRef string, remoteRef string) (string, error)
+
+	Initialize(remote *Remote) error
+	Finish(remote *Remote) error
 }
 
 type Remote struct {
@@ -57,7 +60,7 @@ func NewRemote(handler RemoteHandler, reader io.Reader, writer io.Writer, logger
 		logger = log.New(os.Stderr, "", 0)
 	}
 
-	return &Remote{
+	remote := &Remote{
 		reader:   reader,
 		writer:   writer,
 		Logger:   logger,
@@ -67,7 +70,13 @@ func NewRemote(handler RemoteHandler, reader io.Reader, writer io.Writer, logger
 		Tracker: tracker,
 
 		Handler: handler,
-	}, nil
+	}
+
+	if err := handler.Initialize(remote); err != nil {
+		return nil, err
+	}
+
+	return remote, nil
 }
 
 func (r *Remote) Printf(format string, a ...interface{}) (n int, err error) {
@@ -118,6 +127,7 @@ func (r *Remote) fetch(sha, ref string) {
 
 func (r *Remote) ProcessCommands() error {
 	reader := bufio.NewReader(r.reader)
+loop:
 	for {
 		command, err := reader.ReadString('\n')
 		if err != nil {
@@ -160,9 +170,11 @@ func (r *Remote) ProcessCommands() error {
 			}
 			r.Printf("\n")
 			r.todo = nil
-			return nil
+			break loop
 		default:
 			return fmt.Errorf("received unknown command %q", command)
 		}
 	}
+
+	return r.Handler.Finish(r)
 }

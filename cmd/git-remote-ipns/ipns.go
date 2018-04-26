@@ -27,7 +27,20 @@ type refPath struct {
 }
 
 type IpnsHandler struct {
-	remoteName string
+	remoteName  string
+	currentHash string
+}
+
+func (h *IpnsHandler) Initialize(remote *core.Remote) error {
+	h.currentHash = h.remoteName
+	return nil
+}
+
+func (h *IpnsHandler) Finish(remote *core.Remote) error {
+	//TODO: publish
+
+	remote.Logger.Printf("Pushed to IPFS as \x1b[32mipns::%s\x1b[39m\n", h.currentHash)
+	return nil
 }
 
 func (h *IpnsHandler) List(remote *core.Remote, forPush bool) ([]string, error) {
@@ -114,7 +127,7 @@ func (h *IpnsHandler) Push(remote *core.Remote, local string, remoteRef string) 
 	}
 
 	//patch object
-	res, err := api.PatchLink(h.remoteName, remoteRef, c.String(), true)
+	res, err := api.PatchLink(h.currentHash, remoteRef, c.String(), true)
 	if err != nil {
 		return "", fmt.Errorf("push: %v", err)
 	}
@@ -135,7 +148,7 @@ func (h *IpnsHandler) Push(remote *core.Remote, local string, remoteRef string) 
 		}
 	}
 
-	remote.Logger.Printf("Pushed to IPFS as \x1b[32mipns::%s\x1b[39m\n", res)
+	h.currentHash = res
 
 	return local, nil
 }
