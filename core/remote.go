@@ -53,12 +53,6 @@ func NewRemote(handler RemoteHandler, reader io.Reader, writer io.Writer, logger
 		return nil, fmt.Errorf("fetch: %v", err)
 	}
 
-	if reader == nil {
-		reader = os.Stdin
-	}
-	if writer == nil {
-		writer = os.Stdout
-	}
 	if logger == nil {
 		logger = log.New(os.Stderr, "", 0)
 	}

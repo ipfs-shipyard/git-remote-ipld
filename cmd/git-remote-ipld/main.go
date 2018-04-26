@@ -34,7 +34,7 @@ func Main(args []string, reader io.Reader, writer io.Writer, logger *log.Logger)
 }
 
 func main() {
-	if err := Main(os.Args, nil, nil, nil); err != nil {
+	if err := Main(os.Args, os.Stdin, os.Stdout, nil); err != nil {
 		fmt.Fprintf(os.Stderr, "\x1b[K")
 		log.Fatal(err)
 	}

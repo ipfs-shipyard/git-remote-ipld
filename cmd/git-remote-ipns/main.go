@@ -32,7 +32,7 @@ func Main(reader io.Reader, writer io.Writer, logger *log.Logger) error {
 }
 
 func main() {
-	if err := Main(nil, nil, nil); err != nil {
+	if err := Main(os.Stdin, os.Stdout, nil); err != nil {
 		fmt.Fprintf(os.Stderr, "\x1b[K")
 		log.Fatal(err)
 	}
