@@ -19,6 +19,8 @@ type RemoteHandler interface {
 
 	Initialize(remote *Remote) error
 	Finish(remote *Remote) error
+
+	ProvideBlock(cid string) ([]byte, error)
 }
 
 type Remote struct {
@@ -89,7 +91,7 @@ func (r *Remote) NewPush() *Push {
 }
 
 func (r *Remote) NewFetch() *Fetch {
-	return NewFetch(r.localDir, r.Tracker)
+	return NewFetch(r.localDir, r.Tracker, r.Handler.ProvideBlock)
 }
 
 func (r *Remote) Close() error {

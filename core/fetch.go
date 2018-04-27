@@ -2,20 +2,24 @@ package core
 
 import (
 	"container/list"
-
+	"encoding/hex"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
 	"path"
 
-	"encoding/hex"
 	ipfs "github.com/ipfs/go-ipfs-api"
 	ipldgit "github.com/ipfs/go-ipld-git"
 
 	cid "gx/ipfs/QmNp85zy9RLrQ5oQD4hPyS39ezrrXpcaa7R4Y9kxdWQLLQ/go-cid"
 	mh "gx/ipfs/QmU9a9NV9RdPNwZQDYd5uKsm6N6LJLSvLbywDDYFbaaC6P/go-multihash"
 )
+
+var ErrNotProvided = errors.New("block not provided")
+
+type ObjectProvider func(cid string) ([]byte, error)
 
 type Fetch struct {
 	objectDir string
@@ -24,15 +28,18 @@ type Fetch struct {
 	todo    *list.List
 	log     *log.Logger
 	tracker *Tracker
+
+	provider ObjectProvider
 }
 
-func NewFetch(gitDir string, tracker *Tracker) *Fetch {
+func NewFetch(gitDir string, tracker *Tracker, provider ObjectProvider) *Fetch {
 	return &Fetch{
 		objectDir: path.Join(gitDir, "objects"),
 		gitDir:    gitDir,
 		todo:      list.New(),
 		log:       log.New(os.Stderr, "fetch: ", 0),
 		tracker:   tracker,
+		provider:  provider,
 	}
 }
 
@@ -52,9 +59,9 @@ func (f *Fetch) doWork() error {
 			return fmt.Errorf("fetch: %v", err)
 		}
 
-		c := cid.NewCidV1(cid.GitRaw, mhash)
+		c := cid.NewCidV1(cid.GitRaw, mhash).String()
 
-		f.log.Printf("%s %s\r\x1b[A", hash, c.String())
+		f.log.Printf("%s %s\r\x1b[A", hash, c)
 
 		objectPath, err := prepHashPath(f.objectDir, hash)
 		if err != nil {
@@ -65,9 +72,16 @@ func (f *Fetch) doWork() error {
 			continue
 		}
 
-		object, err := api.BlockGet(c.String())
+		object, err := f.provider(c)
 		if err != nil {
-			return fmt.Errorf("fetch: %v", err)
+			if err != ErrNotProvided {
+				return err
+			}
+
+			object, err = api.BlockGet(c)
+			if err != nil {
+				return fmt.Errorf("fetch: %v", err)
+			}
 		}
 
 		f.processLinks(object)

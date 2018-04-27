@@ -4,7 +4,9 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+
 	"github.com/magik6k/git-remote-ipld/core"
+
 	"gopkg.in/src-d/go-git.v4/plumbing"
 )
 
@@ -117,4 +119,8 @@ func (h *IpldHandler) Initialize(remote *core.Remote) error {
 
 func (h *IpldHandler) Finish(remote *core.Remote) error {
 	return nil
+}
+
+func (h *IpldHandler) ProvideBlock(cid string) ([]byte, error) {
+	return nil, core.ErrNotProvided
 }

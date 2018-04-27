@@ -4,18 +4,23 @@ import (
 	"fmt"
 	"path"
 	"strings"
-
-	ipfs "github.com/ipfs/go-ipfs-api"
-	"github.com/magik6k/git-remote-ipld/core"
-
+	"io/ioutil"
 	"bytes"
 	"encoding/hex"
+	"os"
+
+	ipfs "github.com/ipfs/go-ipfs-api"
+	core "github.com/magik6k/git-remote-ipld/core"
+
 	"gopkg.in/src-d/go-git.v4/plumbing"
 
 	"gx/ipfs/QmNp85zy9RLrQ5oQD4hPyS39ezrrXpcaa7R4Y9kxdWQLLQ/go-cid"
+	"gx/ipfs/QmVmDhyTTUcQXFD1rRQ64fGLMSAoaQvNH3hwuaCFAPq2hy/errors"
 )
 
 const (
+	LARGE_OBJECT_DIR = "objects"
+
 	REFPATH_HEAD = iota
 	REFPATH_REF
 )
@@ -28,11 +33,16 @@ type refPath struct {
 }
 
 type IpnsHandler struct {
+	api *ipfs.Shell
+
 	remoteName  string
 	currentHash string
+
+	largeObjs map[string]string
 }
 
 func (h *IpnsHandler) Initialize(remote *core.Remote) error {
+	h.api = ipfs.NewLocalShell()
 	h.currentHash = h.remoteName
 	return nil
 }
@@ -44,12 +54,63 @@ func (h *IpnsHandler) Finish(remote *core.Remote) error {
 	return nil
 }
 
-func (h *IpnsHandler) List(remote *core.Remote, forPush bool) ([]string, error) {
-	api := ipfs.NewLocalShell()
+func (h *IpnsHandler) ProvideBlock(cid string) ([]byte, error) {
+	//TODO: Integrate with tracker too (If resolved incorrectly or starting from
+	// empty dir, we'll lose track of large objects)
 
+	if h.largeObjs == nil {
+		if err := h.getObjectMap(); err != nil {
+			return nil, err
+		}
+	}
+
+	mappedCid, ok := h.largeObjs[cid]
+	if !ok {
+		return nil, core.ErrNotProvided
+	}
+
+	r, err := h.api.Cat(fmt.Sprintf("/ipfs/%s", mappedCid))
+	if err != nil {
+		return nil, errors.New("cat error")
+	}
+
+	data, err := ioutil.ReadAll(r)
+	if err != nil {
+		return nil, err
+	}
+
+	realCid, err := h.api.DagPut(data, "raw", "git")
+	if err != nil {
+		return nil, err
+	}
+
+	if realCid != cid {
+		return nil, fmt.Errorf("unexpected cid for provided block %s != %s", realCid, cid)
+	}
+
+	return data, nil
+}
+
+func (h *IpnsHandler) getObjectMap() error {
+	h.largeObjs = map[string]string{}
+
+	links, err := h.api.List(h.currentHash + "/" + LARGE_OBJECT_DIR)
+	if err != nil {
+		return err
+	}
+
+	for _, link := range links {
+		fmt.Fprintf(os.Stderr, "map %s->%s\n", link.Name, link.Hash)
+		h.largeObjs[link.Name] = link.Hash
+	}
+
+	return nil
+}
+
+func (h *IpnsHandler) List(remote *core.Remote, forPush bool) ([]string, error) {
 	out := make([]string, 0)
 	if !forPush {
-		refs, err := h.paths(api, h.remoteName)
+		refs, err := h.paths(h.api, h.remoteName, 0)
 		if err != nil {
 			return nil, err
 		}
@@ -71,7 +132,7 @@ func (h *IpnsHandler) List(remote *core.Remote, forPush bool) ([]string, error) 
 				out = append(out, fmt.Sprintf("%s %s", hash, r))
 			case REFPATH_REF:
 				r := path.Join(strings.Split(ref.path, "/")[1:]...)
-				dest, err := h.getRef(api, r)
+				dest, err := h.getRef(r)
 				if err != nil {
 					return nil, err
 				}
@@ -135,7 +196,7 @@ func (h *IpnsHandler) Push(remote *core.Remote, local string, remoteRef string) 
 		return "", fmt.Errorf("push: %v", err)
 	}
 
-	head, err := h.getRef(api, "HEAD")
+	head, err := h.getRef("HEAD")
 	if err != nil {
 		return "", fmt.Errorf("push: %v", err)
 	}
@@ -174,8 +235,8 @@ func (h *IpnsHandler) bigNodePatcher(api *ipfs.Shell) func(*cid.Cid, []byte) err
 	}
 }
 
-func (h *IpnsHandler) getRef(api *ipfs.Shell, name string) (string, error) {
-	r, err := api.Cat(path.Join(h.remoteName, name))
+func (h *IpnsHandler) getRef(name string) (string, error) {
+	r, err := h.api.Cat(path.Join(h.remoteName, name))
 	if err != nil {
 		if strings.Contains(err.Error(), "cat: no link named") {
 			return "", nil
@@ -193,7 +254,7 @@ func (h *IpnsHandler) getRef(api *ipfs.Shell, name string) (string, error) {
 	return buf.String(), nil
 }
 
-func (h *IpnsHandler) paths(api *ipfs.Shell, p string) ([]refPath, error) {
+func (h *IpnsHandler) paths(api *ipfs.Shell, p string, level int) ([]refPath, error) {
 	links, err := api.List(p)
 	if err != nil {
 		return nil, err
@@ -203,14 +264,18 @@ func (h *IpnsHandler) paths(api *ipfs.Shell, p string) ([]refPath, error) {
 	for _, link := range links {
 		switch link.Type {
 		case ipfs.TDirectory:
-			sub, err := h.paths(api, path.Join(p, link.Name))
+			if level == 0 && link.Name == LARGE_OBJECT_DIR {
+				continue
+			}
+
+			sub, err := h.paths(api, path.Join(p, link.Name), level + 1)
 			if err != nil {
 				return nil, err
 			}
 			out = append(out, sub...)
 		case ipfs.TFile:
 			out = append(out, refPath{path.Join(p, link.Name), REFPATH_REF, link.Hash})
-		case -1: //unknown, git node
+		case -1: //unknown, assume git node
 			out = append(out, refPath{path.Join(p, link.Name), REFPATH_HEAD, link.Hash})
 		default:
 			return nil, fmt.Errorf("unexpected link type %d", link.Type)
