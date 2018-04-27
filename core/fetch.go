@@ -4,16 +4,17 @@ import (
 	"container/list"
 
 	"fmt"
+	"io/ioutil"
+	"log"
 	"os"
 	"path"
 
 	"encoding/hex"
 	ipfs "github.com/ipfs/go-ipfs-api"
 	ipldgit "github.com/ipfs/go-ipld-git"
+
 	cid "gx/ipfs/QmNp85zy9RLrQ5oQD4hPyS39ezrrXpcaa7R4Y9kxdWQLLQ/go-cid"
 	mh "gx/ipfs/QmU9a9NV9RdPNwZQDYd5uKsm6N6LJLSvLbywDDYFbaaC6P/go-multihash"
-	"io/ioutil"
-	"log"
 )
 
 type Fetch struct {

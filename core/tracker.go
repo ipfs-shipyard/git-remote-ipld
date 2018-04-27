@@ -1,9 +1,10 @@
 package core
 
 import (
-	"gx/ipfs/Qmao4ZjrenhCnyy3vmZ1q4rjvbo7BZtKgWpYujtpbXwJu8/badger"
 	"os"
 	"path"
+
+	"gx/ipfs/Qmao4ZjrenhCnyy3vmZ1q4rjvbo7BZtKgWpYujtpbXwJu8/badger"
 )
 
 //Tracker tracks which hashes are published in IPLD

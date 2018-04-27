@@ -164,7 +164,7 @@ func (h *IpnsHandler) bigNodePatcher(api *ipfs.Shell) func(*cid.Cid, []byte) err
 				return err
 			}
 
-			h.currentHash, err = api.PatchLink(h.currentHash, "objects/" + hash.String(), c, true)
+			h.currentHash, err = api.PatchLink(h.currentHash, "objects/"+hash.String(), c, true)
 			if err != nil {
 				return err
 			}
