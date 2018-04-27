@@ -7,8 +7,6 @@ import (
 	"io/ioutil"
 	"bytes"
 	"encoding/hex"
-	"os"
-
 	ipfs "github.com/ipfs/go-ipfs-api"
 	core "github.com/magik6k/git-remote-ipld/core"
 
@@ -100,7 +98,6 @@ func (h *IpnsHandler) getObjectMap() error {
 	}
 
 	for _, link := range links {
-		fmt.Fprintf(os.Stderr, "map %s->%s\n", link.Name, link.Hash)
 		h.largeObjs[link.Name] = link.Hash
 	}
 
