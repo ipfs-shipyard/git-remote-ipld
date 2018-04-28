@@ -10,6 +10,8 @@ import (
 //Tracker tracks which hashes are published in IPLD
 type Tracker struct {
 	db *badger.DB
+
+	txn *badger.Txn
 }
 
 func NewTracker(gitPath string) (*Tracker, error) {
@@ -61,22 +63,33 @@ func (t *Tracker) SetRef(refName string, hash []byte) error {
 }
 
 func (t *Tracker) AddEntry(hash []byte) error {
-	txn := t.db.NewTransaction(true)
-	defer txn.Discard()
+	if t.txn == nil {
+		t.txn = t.db.NewTransaction(true)
+	}
 
-	err := txn.Set([]byte(hash), []byte{}, 1)
+	err := t.txn.Set([]byte(hash), []byte{}, 1)
+	if err == badger.ErrTxnTooBig {
+		if err := t.txn.Commit(nil); err != nil {
+			return err
+		}
+		t.txn = t.db.NewTransaction(true)
+		if err := t.txn.Set([]byte(hash), []byte{}, 1); err != nil {
+			return err
+		}
+	}
 	if err != nil {
 		return err
 	}
 
-	return txn.Commit(nil)
+	return nil
 }
 
 func (t *Tracker) HasEntry(hash []byte) (bool, error) {
-	txn := t.db.NewTransaction(false)
-	defer txn.Discard()
+	if t.txn == nil {
+		t.txn = t.db.NewTransaction(true)
+	}
 
-	it, err := txn.Get(hash)
+	it, err := t.txn.Get(hash)
 	if err == badger.ErrKeyNotFound {
 		return false, nil
 	}
@@ -89,5 +102,11 @@ func (t *Tracker) HasEntry(hash []byte) (bool, error) {
 }
 
 func (t *Tracker) Close() error {
+	if t.txn != nil {
+		if err := t.txn.Commit(nil); err != nil {
+			return err
+		}
+		t.txn.Discard()
+	}
 	return t.db.Close()
 }

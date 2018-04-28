@@ -13,6 +13,7 @@ import (
 	ipldgit "github.com/ipfs/go-ipld-git"
 	git "gopkg.in/src-d/go-git.v4"
 	plumbing "gopkg.in/src-d/go-git.v4/plumbing"
+	sizedwaitgroup "github.com/remeh/sizedwaitgroup"
 
 	cid "gx/ipfs/QmNp85zy9RLrQ5oQD4hPyS39ezrrXpcaa7R4Y9kxdWQLLQ/go-cid"
 	mh "gx/ipfs/QmU9a9NV9RdPNwZQDYd5uKsm6N6LJLSvLbywDDYFbaaC6P/go-multihash"
@@ -29,6 +30,9 @@ type Push struct {
 	tracker *Tracker
 	repo    *git.Repository
 
+	errCh chan error
+	wg sizedwaitgroup.SizedWaitGroup
+
 	NewNode func(hash *cid.Cid, data []byte) error
 }
 
@@ -41,6 +45,9 @@ func NewPush(gitDir string, tracker *Tracker, repo *git.Repository) *Push {
 		tracker:   tracker,
 		repo:      repo,
 		todoc:     1,
+
+		wg: sizedwaitgroup.New(512),
+		errCh: make(chan error),
 	}
 }
 
@@ -50,6 +57,8 @@ func (p *Push) PushHash(hash string) error {
 }
 
 func (p *Push) doWork() error {
+	defer p.wg.Wait()
+
 	api := ipfs.NewLocalShell()
 
 	for e := p.todo.Front(); e != nil; e = e.Next() {
@@ -102,29 +111,45 @@ func (p *Push) doWork() error {
 		}
 
 		p.done++
-		p.log.Printf("%d/%d %s %s\r\x1b[A", p.done, p.todoc, hash, expectedCid.String())
-
-		res, err := api.DagPut(raw, "raw", "git")
-		if err != nil {
-			return fmt.Errorf("push: %v", err)
+		if p.done % 100 == 0 || p.done == p.todoc {
+			p.log.Printf("%d/%d %s %s\r\x1b[A", p.done, p.todoc, hash, expectedCid.String())
 		}
+
+		p.wg.Add()
+		go func() {
+			defer p.wg.Done()
+
+			res, err := api.DagPut(raw, "raw", "git")
+			if err != nil {
+				p.errCh <- fmt.Errorf("push: %v", err)
+				return
+			}
+
+			if expectedCid.String() != res {
+				p.errCh <-  fmt.Errorf("CIDs don't match: expected %s, got %s", expectedCid.String(), res)
+				return
+			}
+
+			if p.NewNode != nil {
+				if err := p.NewNode(expectedCid, raw); err != nil {
+					p.errCh <-  err
+					return
+				}
+			}
+		}()
 
 		err = p.tracker.AddEntry(sha)
 		if err != nil {
 			return fmt.Errorf("push: %v", err)
 		}
 
-		if expectedCid.String() != res {
-			return fmt.Errorf("CIDs don't match: expected %s, got %s", expectedCid.String(), res)
-		}
-
-		if p.NewNode != nil {
-			if err := p.NewNode(expectedCid, raw); err != nil {
-				return err
-			}
-		}
-
 		p.processLinks(raw)
+
+		select {
+		case e := <-p.errCh:
+			return e
+		default:
+		}
 	}
 	p.log.Printf("\n")
 	return nil
