@@ -1,10 +1,11 @@
 package core
 
 import (
+	"fmt"
 	"os"
 	"path"
 
-	"gx/ipfs/Qmao4ZjrenhCnyy3vmZ1q4rjvbo7BZtKgWpYujtpbXwJu8/badger"
+	"gx/ipfs/QmbHorb92LbsEGXK47MevydDCXGKi474EVXb5iiamBQP3N/badger"
 )
 
 //Tracker tracks which hashes are published in IPLD
@@ -54,7 +55,7 @@ func (t *Tracker) SetRef(refName string, hash []byte) error {
 	txn := t.db.NewTransaction(true)
 	defer txn.Discard()
 
-	err := txn.Set([]byte(refName), hash, 0)
+	err := txn.Set([]byte(refName), hash)
 	if err != nil {
 		return err
 	}
@@ -67,18 +68,17 @@ func (t *Tracker) AddEntry(hash []byte) error {
 		t.txn = t.db.NewTransaction(true)
 	}
 
-	err := t.txn.Set([]byte(hash), []byte{}, 1)
-	if err == badger.ErrTxnTooBig {
+	err := t.txn.Set([]byte(hash), []byte{})
+	if err != nil && err.Error() == badger.ErrTxnTooBig.Error() {
 		if err := t.txn.Commit(nil); err != nil {
-			return err
+			return fmt.Errorf("commit: %s", err)
 		}
 		t.txn = t.db.NewTransaction(true)
-		if err := t.txn.Set([]byte(hash), []byte{}, 1); err != nil {
+		if err := t.txn.Set([]byte(hash), []byte{}); err != nil {
 			return err
 		}
-	}
-	if err != nil {
-		return err
+	} else if err != nil {
+		return fmt.Errorf("set: %s", err)
 	}
 
 	return nil
@@ -89,14 +89,13 @@ func (t *Tracker) HasEntry(hash []byte) (bool, error) {
 		t.txn = t.db.NewTransaction(true)
 	}
 
-	it, err := t.txn.Get(hash)
+	_, err := t.txn.Get(hash)
 	if err == badger.ErrKeyNotFound {
 		return false, nil
 	}
 	if err != nil {
 		return false, err
 	}
-	it.UserMeta()
 
 	return true, nil
 }
@@ -106,6 +105,7 @@ func (t *Tracker) Close() error {
 		if err := t.txn.Commit(nil); err != nil {
 			return err
 		}
+
 	}
 	return t.db.Close()
 }

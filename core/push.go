@@ -3,19 +3,19 @@ package core
 import (
 	"container/list"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
-	"path"
-	"errors"
 	"os/signal"
+	"path"
 
 	ipfs "github.com/ipfs/go-ipfs-api"
 	ipldgit "github.com/ipfs/go-ipld-git"
+	sizedwaitgroup "github.com/remeh/sizedwaitgroup"
 	git "gopkg.in/src-d/go-git.v4"
 	plumbing "gopkg.in/src-d/go-git.v4/plumbing"
-	sizedwaitgroup "github.com/remeh/sizedwaitgroup"
 
 	cid "gx/ipfs/QmNp85zy9RLrQ5oQD4hPyS39ezrrXpcaa7R4Y9kxdWQLLQ/go-cid"
 	mh "gx/ipfs/QmU9a9NV9RdPNwZQDYd5uKsm6N6LJLSvLbywDDYFbaaC6P/go-multihash"
@@ -33,7 +33,7 @@ type Push struct {
 	repo    *git.Repository
 
 	errCh chan error
-	wg sizedwaitgroup.SizedWaitGroup
+	wg    sizedwaitgroup.SizedWaitGroup
 
 	NewNode func(hash *cid.Cid, data []byte) error
 }
@@ -48,7 +48,7 @@ func NewPush(gitDir string, tracker *Tracker, repo *git.Repository) *Push {
 		repo:      repo,
 		todoc:     1,
 
-		wg: sizedwaitgroup.New(512),
+		wg:    sizedwaitgroup.New(512),
 		errCh: make(chan error),
 	}
 }
@@ -65,7 +65,7 @@ func (p *Push) doWork() error {
 
 	intch := make(chan os.Signal, 1)
 	signal.Notify(intch, os.Interrupt)
-	go func(){
+	go func() {
 		<-intch
 		p.errCh <- errors.New("interrupted")
 	}()
@@ -121,7 +121,7 @@ func (p *Push) doWork() error {
 		}
 
 		p.done++
-		if p.done % 100 == 0 || p.done == p.todoc {
+		if p.done%100 == 0 || p.done == p.todoc {
 			p.log.Printf("%d/%d %s %s\r\x1b[A", p.done, p.todoc, hash, expectedCid.String())
 		}
 
@@ -136,13 +136,13 @@ func (p *Push) doWork() error {
 			}
 
 			if expectedCid.String() != res {
-				p.errCh <-  fmt.Errorf("CIDs don't match: expected %s, got %s", expectedCid.String(), res)
+				p.errCh <- fmt.Errorf("CIDs don't match: expected %s, got %s", expectedCid.String(), res)
 				return
 			}
 
 			if p.NewNode != nil {
 				if err := p.NewNode(expectedCid, raw); err != nil {
-					p.errCh <-  err
+					p.errCh <- err
 					return
 				}
 			}
@@ -150,7 +150,7 @@ func (p *Push) doWork() error {
 
 		err = p.tracker.AddEntry(sha)
 		if err != nil {
-			return fmt.Errorf("push: %v", err)
+			return fmt.Errorf("push/addentry: %v", err)
 		}
 
 		p.processLinks(raw)

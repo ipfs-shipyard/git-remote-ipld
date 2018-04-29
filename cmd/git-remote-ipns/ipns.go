@@ -1,12 +1,13 @@
 package main
 
 import (
-	"fmt"
-	"path"
-	"strings"
-	"io/ioutil"
 	"bytes"
 	"encoding/hex"
+	"fmt"
+	"io/ioutil"
+	"path"
+	"strings"
+
 	ipfs "github.com/ipfs/go-ipfs-api"
 	core "github.com/magik6k/git-remote-ipld/core"
 
@@ -265,7 +266,7 @@ func (h *IpnsHandler) paths(api *ipfs.Shell, p string, level int) ([]refPath, er
 				continue
 			}
 
-			sub, err := h.paths(api, path.Join(p, link.Name), level + 1)
+			sub, err := h.paths(api, path.Join(p, link.Name), level+1)
 			if err != nil {
 				return nil, err
 			}
