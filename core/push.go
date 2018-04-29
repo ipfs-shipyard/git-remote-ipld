@@ -8,6 +8,8 @@ import (
 	"log"
 	"os"
 	"path"
+	"errors"
+	"os/signal"
 
 	ipfs "github.com/ipfs/go-ipfs-api"
 	ipldgit "github.com/ipfs/go-ipld-git"
@@ -60,6 +62,14 @@ func (p *Push) doWork() error {
 	defer p.wg.Wait()
 
 	api := ipfs.NewLocalShell()
+
+	intch := make(chan os.Signal, 1)
+	signal.Notify(intch, os.Interrupt)
+	go func(){
+		<-intch
+		p.errCh <- errors.New("interrupted")
+	}()
+	defer signal.Stop(intch)
 
 	for e := p.todo.Front(); e != nil; e = e.Next() {
 		hash := e.Value.(string)

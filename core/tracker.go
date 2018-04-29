@@ -106,7 +106,6 @@ func (t *Tracker) Close() error {
 		if err := t.txn.Commit(nil); err != nil {
 			return err
 		}
-		t.txn.Discard()
 	}
 	return t.db.Close()
 }

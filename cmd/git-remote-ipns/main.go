@@ -27,8 +27,16 @@ func Main(reader io.Reader, writer io.Writer, logger *log.Logger) error {
 	if err != nil {
 		return err
 	}
-	defer remote.Close()
-	return remote.ProcessCommands()
+
+	if err := remote.ProcessCommands(); err != nil {
+		err2 := remote.Close()
+		if err2 != nil {
+			return fmt.Errorf("%s; close error: %s", err, err2)
+		}
+		return err
+	}
+
+	return remote.Close()
 }
 
 func main() {
@@ -36,4 +44,5 @@ func main() {
 		fmt.Fprintf(os.Stderr, "\x1b[K")
 		log.Fatal(err)
 	}
+	fmt.Fprintf(os.Stderr, "Done\n")
 }
