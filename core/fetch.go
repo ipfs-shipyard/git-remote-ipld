@@ -25,6 +25,9 @@ type Fetch struct {
 	objectDir string
 	gitDir    string
 
+	done    uint64
+	todoc   uint64
+
 	todo    *list.List
 	log     *log.Logger
 	tracker *Tracker
@@ -45,6 +48,7 @@ func NewFetch(gitDir string, tracker *Tracker, provider ObjectProvider) *Fetch {
 
 func (f *Fetch) FetchHash(base string) error {
 	f.todo.PushFront(base)
+	f.todoc++
 	return f.doWork()
 }
 
@@ -61,7 +65,7 @@ func (f *Fetch) doWork() error {
 
 		c := cid.NewCidV1(cid.GitRaw, mhash).String()
 
-		f.log.Printf("%s %s\r\x1b[A", hash, c)
+		f.log.Printf("%d/%d %s %s\r\x1b[A", f.done, f.todoc, hash, c)
 
 		objectPath, err := prepHashPath(f.objectDir, hash)
 		if err != nil {
@@ -69,6 +73,7 @@ func (f *Fetch) doWork() error {
 		}
 
 		if _, err := os.Stat(*objectPath); !os.IsNotExist(err) {
+			f.todoc--
 			continue
 		}
 
@@ -84,6 +89,7 @@ func (f *Fetch) doWork() error {
 			}
 		}
 
+		f.done++
 		f.processLinks(object)
 
 		object = compressObject(object)
@@ -129,6 +135,7 @@ func (f *Fetch) processLinks(object []byte) error {
 		}
 
 		f.todo.PushBack(hash)
+		f.todoc++
 	}
 	return nil
 }
