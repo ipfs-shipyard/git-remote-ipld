@@ -95,6 +95,10 @@ func (h *IpnsHandler) getObjectMap() error {
 
 	links, err := h.api.List(h.currentHash + "/" + LARGE_OBJECT_DIR)
 	if err != nil {
+		//TODO: Find a better way with coreapi
+		if strings.HasPrefix(err.Error(), `ls: no link named "objects" under`) {
+			return nil
+		}
 		return err
 	}
 
