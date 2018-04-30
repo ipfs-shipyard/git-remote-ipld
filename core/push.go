@@ -42,11 +42,12 @@ func NewPush(gitDir string, tracker *Tracker, repo *git.Repository) *Push {
 	return &Push{
 		objectDir: path.Join(gitDir, "objects"),
 		gitDir:    gitDir,
-		todo:      list.New(),
-		log:       log.New(os.Stderr, "push: ", 0),
-		tracker:   tracker,
-		repo:      repo,
-		todoc:     1,
+
+		todo:    list.New(),
+		log:     log.New(os.Stderr, "push: ", 0),
+		tracker: tracker,
+		repo:    repo,
+		todoc:   1,
 
 		wg:    sizedwaitgroup.New(512),
 		errCh: make(chan error),
