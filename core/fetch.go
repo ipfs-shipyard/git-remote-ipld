@@ -1,14 +1,14 @@
 package core
 
 import (
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
-	"sync"
 	"path"
-	"encoding/hex"
+	"sync"
 
 	ipfs "github.com/ipfs/go-ipfs-api"
 	"github.com/ipfs/go-ipld-git"
@@ -20,7 +20,7 @@ import (
 
 var ErrNotProvided = errors.New("block not provided")
 
-type ObjectProvider func(cid string) ([]byte, error)
+type ObjectProvider func(cid string, tracker *Tracker) ([]byte, error)
 
 type Fetch struct {
 	objectDir string
@@ -135,7 +135,7 @@ func (f *Fetch) processSingle(hash string) error {
 			return
 		}
 
-		object, err := f.provider(c)
+		object, err := f.provider(c, f.tracker)
 		if err != nil {
 			if err != ErrNotProvided {
 				f.errCh <- err

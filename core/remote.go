@@ -20,7 +20,7 @@ type RemoteHandler interface {
 	Initialize(remote *Remote) error
 	Finish(remote *Remote) error
 
-	ProvideBlock(cid string) ([]byte, error)
+	ProvideBlock(cid string, tracker *Tracker) ([]byte, error)
 }
 
 type Remote struct {
@@ -122,7 +122,7 @@ func (r *Remote) fetch(sha, ref string) {
 			return "", fmt.Errorf("fetch: %v", err)
 		}
 
-		r.Tracker.SetRef(ref, sha)
+		r.Tracker.Set(ref, sha)
 		return "", nil
 	})
 }

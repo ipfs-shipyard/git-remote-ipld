@@ -36,7 +36,7 @@ func NewTracker(gitPath string) (*Tracker, error) {
 	}, nil
 }
 
-func (t *Tracker) GetRef(refName string) ([]byte, error) {
+func (t *Tracker) Get(refName string) ([]byte, error) {
 	txn := t.db.NewTransaction(false)
 	defer txn.Discard()
 
@@ -51,7 +51,7 @@ func (t *Tracker) GetRef(refName string) ([]byte, error) {
 	return it.Value()
 }
 
-func (t *Tracker) SetRef(refName string, hash []byte) error {
+func (t *Tracker) Set(refName string, hash []byte) error {
 	txn := t.db.NewTransaction(true)
 	defer txn.Discard()
 
@@ -61,6 +61,27 @@ func (t *Tracker) SetRef(refName string, hash []byte) error {
 	}
 
 	return txn.Commit(nil)
+}
+
+func (t *Tracker) ListPrefixed(prefix string) (map[string]string, error) {
+	out := map[string]string{}
+
+	txn := t.db.NewTransaction(false)
+	defer txn.Discard()
+
+	it := txn.NewIterator(badger.DefaultIteratorOptions)
+	defer it.Close()
+	for it.Seek([]byte(prefix)); it.ValidForPrefix([]byte(prefix)); it.Next() {
+		item := it.Item()
+		k := item.Key()
+		v, err := item.Value()
+		if err != nil {
+			return nil, err
+		}
+		out[string(k)] = string(v)
+	}
+
+	return out, nil
 }
 
 func (t *Tracker) AddEntry(hash []byte) error {

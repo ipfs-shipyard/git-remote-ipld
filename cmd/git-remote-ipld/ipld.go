@@ -32,7 +32,7 @@ func (h *IpldHandler) List(remote *core.Remote, forPush bool) ([]string, error) 
 	var n int
 	err = it.ForEach(func(ref *plumbing.Reference) error {
 		n++
-		trackedRef, err := remote.Tracker.GetRef(ref.Name().String())
+		trackedRef, err := remote.Tracker.Get(ref.Name().String())
 		if err != nil {
 			return err
 		}
@@ -101,7 +101,7 @@ func (h *IpldHandler) Push(remote *core.Remote, local string, remoteRef string) 
 	}
 
 	hash := localRef.Hash()
-	remote.Tracker.SetRef(remoteRef, (&hash)[:])
+	remote.Tracker.Set(remoteRef, (&hash)[:])
 
 	c, err := core.CidFromHex(headHash)
 	if err != nil {
@@ -121,6 +121,6 @@ func (h *IpldHandler) Finish(remote *core.Remote) error {
 	return nil
 }
 
-func (h *IpldHandler) ProvideBlock(cid string) ([]byte, error) {
+func (h *IpldHandler) ProvideBlock(cid string, tracker *core.Tracker) ([]byte, error) {
 	return nil, core.ErrNotProvided
 }
