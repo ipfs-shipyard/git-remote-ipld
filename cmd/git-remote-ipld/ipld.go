@@ -108,7 +108,7 @@ func (h *IpldHandler) Push(remote *core.Remote, local string, remoteRef string) 
 		return "", fmt.Errorf("push: %v", err)
 	}
 
-	remote.Logger.Printf("Pushed to IPFS as \x1b[32mipld::%s\x1b[39m\n", headHash)
+	remote.Logger.Printf("Pushed to IPFS as \x1b[32mipld://%s\x1b[39m\n", headHash)
 	remote.Logger.Printf("Head CID is %s\n", c.String())
 	return local, nil
 }

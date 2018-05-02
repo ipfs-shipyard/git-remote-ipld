@@ -56,7 +56,7 @@ func (h *IpnsHandler) Finish(remote *core.Remote) error {
 			return err
 		}
 
-		remote.Logger.Printf("Pushed to IPFS as \x1b[32mipns::%s\x1b[39m\n", h.currentHash)
+		remote.Logger.Printf("Pushed to IPFS as \x1b[32mipns://%s\x1b[39m\n", h.currentHash)
 	}
 	return nil
 }

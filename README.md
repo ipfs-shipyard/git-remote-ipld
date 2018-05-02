@@ -7,13 +7,13 @@ This helper is experimental as of now
 ## Usage
 ```
 Clone an example repository:
-$ git clone ipld::2347e110c29742a1783134ef45f5bff58b29e40e
+$ git clone ipld://2347e110c29742a1783134ef45f5bff58b29e40e
 
 Pull a commit:
-$ git pull ipld::2347e110c29742a1783134ef45f5bff58b29e40e
+$ git pull ipld://2347e110c29742a1783134ef45f5bff58b29e40e
 
 Push:
-$ git push --set-upstream ipld:: master
+$ git push --set-upstream ipld:// master
 ```
 
 Note: Some features like remote tracking are still missing, though the plugin is
