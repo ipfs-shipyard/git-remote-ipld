@@ -18,6 +18,36 @@
       "hash": "QmbHorb92LbsEGXK47MevydDCXGKi474EVXb5iiamBQP3N",
       "name": "badger",
       "version": "2.6.0"
+    },
+    {
+      "author": "multiformats",
+      "hash": "QmPnFwZ2JXKnXgMw8CdBPxn7FWh6LLdjUjxV1fKHuJnkr8",
+      "name": "go-multihash",
+      "version": "1.0.8"
+    },
+    {
+      "author": "magik6k",
+      "hash": "QmTRr4W3zT41CJvnoFSmWu9PL9okw99na5XQG1t8JwSWP6",
+      "name": "sizedwaitgroup",
+      "version": "1.0.0"
+    },
+    {
+      "author": "magik6k",
+      "hash": "QmSVCWSGNwq9Lr1t4uLSMnytyJe4uL7NW7jZ3uas5BPpbX",
+      "name": "go-git.v4",
+      "version": "1.0.4"
+    },
+    {
+      "author": "ipfs",
+      "hash": "Qmab1jkxU94CuahLNFU8MxA34dA2hJ89AC681cpjMGPuN8",
+      "name": "go-ipfs-api",
+      "version": "1.2.7"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmazMphtdhiL37KJjfahQXjKvSNt6gjWqGpTs6KXQcAQ8w",
+      "name": "go-ipld-git",
+      "version": "0.2.1"
     }
   ],
   "gxVersion": "0.10.0",

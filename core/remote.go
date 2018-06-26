@@ -10,7 +10,7 @@ import (
 	"path"
 	"strings"
 
-	git "gopkg.in/src-d/go-git.v4"
+	git "gx/ipfs/QmSVCWSGNwq9Lr1t4uLSMnytyJe4uL7NW7jZ3uas5BPpbX/go-git.v4"
 )
 
 type RemoteHandler interface {

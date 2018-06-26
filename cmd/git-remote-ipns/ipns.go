@@ -3,17 +3,16 @@ package main
 import (
 	"bytes"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"path"
 	"strings"
-	"errors"
 
-	ipfs "github.com/ipfs/go-ipfs-api"
 	core "github.com/ipfs-shipyard/git-remote-ipld/core"
+	ipfs "gx/ipfs/Qmab1jkxU94CuahLNFU8MxA34dA2hJ89AC681cpjMGPuN8/go-ipfs-api"
 
-	"gopkg.in/src-d/go-git.v4/plumbing"
-
+	"gx/ipfs/QmSVCWSGNwq9Lr1t4uLSMnytyJe4uL7NW7jZ3uas5BPpbX/go-git.v4/plumbing"
 	"gx/ipfs/QmapdYm1b22Frv3k17fqrBYTFRxwiaVJkB299Mfn33edeB/go-cid"
 )
 
