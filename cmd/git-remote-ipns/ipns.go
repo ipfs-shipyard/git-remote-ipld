@@ -7,14 +7,14 @@ import (
 	"io/ioutil"
 	"path"
 	"strings"
+	"errors"
 
 	ipfs "github.com/ipfs/go-ipfs-api"
-	core "github.com/magik6k/git-remote-ipld/core"
+	core "github.com/ipfs-shipyard/git-remote-ipld/core"
 
 	"gopkg.in/src-d/go-git.v4/plumbing"
 
-	"gx/ipfs/QmNp85zy9RLrQ5oQD4hPyS39ezrrXpcaa7R4Y9kxdWQLLQ/go-cid"
-	"gx/ipfs/QmVmDhyTTUcQXFD1rRQ64fGLMSAoaQvNH3hwuaCFAPq2hy/errors"
+	"gx/ipfs/QmapdYm1b22Frv3k17fqrBYTFRxwiaVJkB299Mfn33edeB/go-cid"
 )
 
 const (

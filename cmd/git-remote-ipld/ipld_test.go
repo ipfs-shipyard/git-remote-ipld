@@ -2,7 +2,7 @@ package main
 
 import (
 	"bytes"
-	"github.com/magik6k/git-remote-ipld/util"
+	"github.com/ipfs-shipyard/git-remote-ipld/util"
 	"io"
 	"io/ioutil"
 	"log"

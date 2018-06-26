@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/magik6k/git-remote-ipld/core"
+	"github.com/ipfs-shipyard/git-remote-ipld/core"
 )
 
 const (
