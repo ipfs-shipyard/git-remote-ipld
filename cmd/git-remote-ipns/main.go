@@ -2,11 +2,12 @@ package main
 
 import (
 	"fmt"
-	"github.com/magik6k/git-remote-ipld/core"
 	"io"
 	"log"
 	"os"
 	"strings"
+
+	"github.com/ipfs-shipyard/git-remote-ipld/core"
 )
 
 const (

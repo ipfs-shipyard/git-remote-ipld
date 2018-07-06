@@ -5,9 +5,9 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/magik6k/git-remote-ipld/core"
+	"github.com/ipfs-shipyard/git-remote-ipld/core"
 
-	"gopkg.in/src-d/go-git.v4/plumbing"
+	"gx/ipfs/QmSVCWSGNwq9Lr1t4uLSMnytyJe4uL7NW7jZ3uas5BPpbX/go-git.v4/plumbing"
 )
 
 type IpldHandler struct {
