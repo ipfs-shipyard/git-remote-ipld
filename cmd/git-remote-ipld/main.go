@@ -15,12 +15,12 @@ const (
 	IPFS_PREFIX = "ipfs://"
 )
 
-func Main(reader io.Reader, writer io.Writer, logger *log.Logger) error {
-	if len(os.Args) < 3 {
+func Main(args []string, reader io.Reader, writer io.Writer, logger *log.Logger) error {
+	if len(args) < 3 {
 		return fmt.Errorf("Usage: git-remote-ipns remote-name url")
 	}
 
-	remoteName := os.Args[2]
+	remoteName := args[2]
 	if strings.HasPrefix(remoteName, IPLD_PREFIX) || strings.HasPrefix(remoteName, IPFS_PREFIX) {
 		remoteName = remoteName[len(IPLD_PREFIX):]
 	}
@@ -42,7 +42,7 @@ func Main(reader io.Reader, writer io.Writer, logger *log.Logger) error {
 }
 
 func main() {
-	if err := Main(os.Stdin, os.Stdout, nil); err != nil {
+	if err := Main(os.Args, os.Stdin, os.Stdout, nil); err != nil {
 		fmt.Fprintf(os.Stderr, "\x1b[K")
 		log.Fatal(err)
 	}

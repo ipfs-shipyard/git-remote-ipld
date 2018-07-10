@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -157,12 +156,25 @@ func (h *IpnsHandler) List(remote *core.Remote, forPush bool) ([]string, error) 
 		}
 
 		err = it.ForEach(func(ref *plumbing.Reference) error {
-			// resolve ref.Name().String()
-			// return that
+			remoteRef := "0000000000000000000000000000000000000000"
 
-			remoteRef := make([]byte, 20)
+			localRef, err := h.api.ResolvePath(path.Join(h.currentHash, ref.Name().String()))
+			if err != nil && !strings.Contains(err.Error(), "no link named") {
+				return err
+			}
+			if err == nil {
+				refCid, err := cid.Parse(localRef)
+				if err != nil {
+					return err
+				}
 
-			out = append(out, fmt.Sprintf("%s %s", hex.EncodeToString(remoteRef), ref.Name()))
+				remoteRef, err = core.HexFromCid(refCid)
+				if err != nil {
+					return err
+				}
+			}
+
+			out = append(out, fmt.Sprintf("%s %s", remoteRef, ref.Name()))
 
 			return nil
 		})
@@ -266,7 +278,7 @@ func (h *IpnsHandler) fillMissingLobjs(tracker *core.Tracker) error {
 			continue
 		}
 
-		k = strings.TrimPrefix(k, LOBJ_TRACKER_PRIFIX + "/")
+		k = strings.TrimPrefix(k, LOBJ_TRACKER_PRIFIX+"/")
 
 		h.largeObjs[k] = v
 		h.currentHash, err = h.api.PatchLink(h.currentHash, "objects/"+k, v, true)
