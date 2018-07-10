@@ -13,6 +13,8 @@ import (
 const (
 	IPLD_PREFIX = "ipld://"
 	IPFS_PREFIX = "ipfs://"
+
+	EMPTY_REPO = "QmUNLLsPACCz1vLxQVkXqqLX5R1X345qqfHbsf67hvA3Nn"
 )
 
 func Main(args []string, reader io.Reader, writer io.Writer, logger *log.Logger) error {
@@ -23,6 +25,10 @@ func Main(args []string, reader io.Reader, writer io.Writer, logger *log.Logger)
 	remoteName := args[2]
 	if strings.HasPrefix(remoteName, IPLD_PREFIX) || strings.HasPrefix(remoteName, IPFS_PREFIX) {
 		remoteName = remoteName[len(IPLD_PREFIX):]
+	}
+
+	if remoteName == "" {
+		remoteName = EMPTY_REPO
 	}
 
 	remote, err := core.NewRemote(&IpnsHandler{remoteName: remoteName}, reader, writer, logger)
