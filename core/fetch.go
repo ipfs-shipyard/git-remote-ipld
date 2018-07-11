@@ -10,11 +10,11 @@ import (
 	"path"
 	"sync"
 
-	"gx/ipfs/QmTRr4W3zT41CJvnoFSmWu9PL9okw99na5XQG1t8JwSWP6/sizedwaitgroup"
-	ipfs "gx/ipfs/Qmab1jkxU94CuahLNFU8MxA34dA2hJ89AC681cpjMGPuN8/go-ipfs-api"
-	"gx/ipfs/QmazMphtdhiL37KJjfahQXjKvSNt6gjWqGpTs6KXQcAQ8w/go-ipld-git"
 	mh "gx/ipfs/QmPnFwZ2JXKnXgMw8CdBPxn7FWh6LLdjUjxV1fKHuJnkr8/go-multihash"
+	"gx/ipfs/QmTRr4W3zT41CJvnoFSmWu9PL9okw99na5XQG1t8JwSWP6/sizedwaitgroup"
+	ipfs "gx/ipfs/QmZBfwm4fRhnk6L5qFKonmJTgVmv7D7LT93ky3WfgKVgxj/go-ipfs-api"
 	"gx/ipfs/QmapdYm1b22Frv3k17fqrBYTFRxwiaVJkB299Mfn33edeB/go-cid"
+	"gx/ipfs/QmazMphtdhiL37KJjfahQXjKvSNt6gjWqGpTs6KXQcAQ8w/go-ipld-git"
 )
 
 var ErrNotProvided = errors.New("block not provided")
