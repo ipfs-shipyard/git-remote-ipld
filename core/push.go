@@ -129,7 +129,7 @@ func (p *Push) doWork() error {
 		go func() {
 			defer p.wg.Done()
 
-			res, err := api.DagPut(raw, "raw", "git")
+			res, err := api.BlockPut(raw, "git-raw", "sha1", -1)
 			if err != nil {
 				p.errCh <- fmt.Errorf("push: %v", err)
 				return
