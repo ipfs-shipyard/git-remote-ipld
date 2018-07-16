@@ -11,13 +11,13 @@ import (
 	"os/signal"
 	"path"
 
+	mh "gx/ipfs/QmPnFwZ2JXKnXgMw8CdBPxn7FWh6LLdjUjxV1fKHuJnkr8/go-multihash"
 	git "gx/ipfs/QmSVCWSGNwq9Lr1t4uLSMnytyJe4uL7NW7jZ3uas5BPpbX/go-git.v4"
 	plumbing "gx/ipfs/QmSVCWSGNwq9Lr1t4uLSMnytyJe4uL7NW7jZ3uas5BPpbX/go-git.v4/plumbing"
-	ipfs "gx/ipfs/Qmab1jkxU94CuahLNFU8MxA34dA2hJ89AC681cpjMGPuN8/go-ipfs-api"
-	ipldgit "gx/ipfs/QmazMphtdhiL37KJjfahQXjKvSNt6gjWqGpTs6KXQcAQ8w/go-ipld-git"
-	mh "gx/ipfs/QmPnFwZ2JXKnXgMw8CdBPxn7FWh6LLdjUjxV1fKHuJnkr8/go-multihash"
 	sizedwaitgroup "gx/ipfs/QmTRr4W3zT41CJvnoFSmWu9PL9okw99na5XQG1t8JwSWP6/sizedwaitgroup"
+	ipfs "gx/ipfs/QmZBfwm4fRhnk6L5qFKonmJTgVmv7D7LT93ky3WfgKVgxj/go-ipfs-api"
 	cid "gx/ipfs/QmapdYm1b22Frv3k17fqrBYTFRxwiaVJkB299Mfn33edeB/go-cid"
+	ipldgit "gx/ipfs/QmazMphtdhiL37KJjfahQXjKvSNt6gjWqGpTs6KXQcAQ8w/go-ipld-git"
 )
 
 type Push struct {
@@ -129,7 +129,7 @@ func (p *Push) doWork() error {
 		go func() {
 			defer p.wg.Done()
 
-			res, err := api.DagPut(raw, "raw", "git")
+			res, err := api.BlockPut(raw, "git-raw", "sha1", -1)
 			if err != nil {
 				p.errCh <- fmt.Errorf("push: %v", err)
 				return

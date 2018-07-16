@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	core "github.com/ipfs-shipyard/git-remote-ipld/core"
-	ipfs "gx/ipfs/Qmab1jkxU94CuahLNFU8MxA34dA2hJ89AC681cpjMGPuN8/go-ipfs-api"
+	ipfs "gx/ipfs/QmZBfwm4fRhnk6L5qFKonmJTgVmv7D7LT93ky3WfgKVgxj/go-ipfs-api"
 
 	"gx/ipfs/QmSVCWSGNwq9Lr1t4uLSMnytyJe4uL7NW7jZ3uas5BPpbX/go-git.v4/plumbing"
 	"gx/ipfs/QmapdYm1b22Frv3k17fqrBYTFRxwiaVJkB299Mfn33edeB/go-cid"
