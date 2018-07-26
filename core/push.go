@@ -96,7 +96,7 @@ func (p *Push) doWork() error {
 
 		obj, err := p.repo.Storer.EncodedObject(plumbing.AnyObject, plumbing.NewHash(hash))
 		if err != nil {
-			return fmt.Errorf("push: %v", err)
+			return fmt.Errorf("push/getObject(%s): %v", hash, err)
 		}
 
 		rawReader, err := obj.Reader()
@@ -131,7 +131,7 @@ func (p *Push) doWork() error {
 
 			res, err := api.BlockPut(raw, "git-raw", "sha1", -1)
 			if err != nil {
-				p.errCh <- fmt.Errorf("push: %v", err)
+				p.errCh <- fmt.Errorf("push/put: %v", err)
 				return
 			}
 
@@ -142,7 +142,7 @@ func (p *Push) doWork() error {
 
 			if p.NewNode != nil {
 				if err := p.NewNode(expectedCid, raw); err != nil {
-					p.errCh <- err
+					p.errCh <- fmt.Errorf("newNode: %s", err)
 					return
 				}
 			}

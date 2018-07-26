@@ -1,6 +1,5 @@
 all: deps
 	go build -o cmd/git-remote-ipld/git-remote-ipld ./cmd/git-remote-ipld/...
-	go build -o cmd/git-remote-ipns/git-remote-ipns ./cmd/git-remote-ipns/...
 
 gx:
 	go get github.com/whyrusleeping/gx
@@ -13,6 +12,5 @@ deps: gx
 
 install: all
 	go install -v ./cmd/git-remote-ipld/...
-	go install -v ./cmd/git-remote-ipns/...
 
 .PHONY: all gx deps install
