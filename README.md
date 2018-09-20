@@ -23,13 +23,9 @@ quite usable. IPNS helper is WIP and doesn't yet do what it should
 1. `go get github.com/magik6k/git-remote-ipld`
 2. `make install`
 3. Done
-4. ???
-5. You will need IPFS with Git plugin installed, see https://github.com/ipfs/go-ipfs/blob/master/docs/plugins.md
+5. Make sure you run go-ipfs 0.4.17 or newer as you need git support
 
 ## Limitations / TODOs
-* IPFS Limits single block to 2MB, this is limiting maximum file size (trying to
-  pull repos with large objects will just make the command hang)
-  * This can and will be worked around for ipns remote.
 * ipns remote is not implemented fully yet
 
 # Troubleshooting
