@@ -159,7 +159,7 @@ func (h *IpnsHandler) List(remote *core.Remote, forPush bool) ([]string, error) 
 			remoteRef := "0000000000000000000000000000000000000000"
 
 			localRef, err := h.api.ResolvePath(path.Join(h.currentHash, ref.Name().String()))
-			if err != nil && !strings.Contains(err.Error(), "no link named") {
+			if err != nil && !(strings.Contains(err.Error(), "no link named") || strings.Contains(err.Error(), "no link by that name")) {
 				return err
 			}
 			if err == nil {
