@@ -55,7 +55,7 @@ def call(opts = []) {
             ansiColor('xterm') {
               def root = tool name: '1.10.2', type: 'go'
               def jobNameArr = "${JOB_NAME}"
-              def jobName = jobNameArr.split("/")[0..1].join("/").toLowerCase()
+              def jobName = jobNameArr.split("/")[0..1].join("/").toLowerCase().replace(' ', '-')
               def originalWs = "${WORKSPACE}"
 
               echo "GOPATH: ${originalWs}"
