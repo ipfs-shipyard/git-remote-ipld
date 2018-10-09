@@ -57,6 +57,11 @@ def call(opts = []) {
               def jobNameArr = "${JOB_NAME}"
               def jobName = jobNameArr.split("/")[0..1].join("/").toLowerCase()
               def originalWs = "${WORKSPACE}"
+
+              echo "GOPATH: ${originalWs}"
+              echo "jName: ${jobName}"
+              echo "jNameA: ${jobNameArr}"
+
               ws("${originalWs}/src/github.com/${jobName}") {
                 def goEnv = ["GOROOT=${root}", "GOPATH=${originalWs}", "PATH=$PATH:${root}/bin:${originalWs}/bin"]
                 withEnv(goEnv + env) {
