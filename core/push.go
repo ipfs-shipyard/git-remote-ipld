@@ -31,6 +31,9 @@ type Push struct {
 	tracker *Tracker
 	repo    *git.Repository
 
+	processing map[string]int
+	subs       map[string][][]byte
+
 	errCh chan error
 	wg    sizedwaitgroup.SizedWaitGroup
 
@@ -47,6 +50,9 @@ func NewPush(gitDir string, tracker *Tracker, repo *git.Repository) *Push {
 		tracker: tracker,
 		repo:    repo,
 		todoc:   1,
+
+		processing: map[string]int{},
+		subs:       map[string][][]byte{},
 
 		wg:    sizedwaitgroup.New(512),
 		errCh: make(chan error),
@@ -72,11 +78,25 @@ func (p *Push) doWork() error {
 	defer signal.Stop(intch)
 
 	for e := p.todo.Front(); e != nil; e = e.Next() {
+		if df, ok := e.Value.(func() error); ok {
+			if err := df(); err != nil {
+				return err
+			}
+			p.todoc--
+			continue
+		}
+
 		hash := e.Value.(string)
 
 		sha, err := hex.DecodeString(hash)
 		if err != nil {
 			return fmt.Errorf("push: %v", err)
+		}
+
+		_, processing := p.processing[string(sha)]
+		if processing {
+			p.todoc--
+			continue
 		}
 
 		has, err := p.tracker.HasEntry(sha)
@@ -122,7 +142,7 @@ func (p *Push) doWork() error {
 
 		p.done++
 		if p.done%100 == 0 || p.done == p.todoc {
-			p.log.Printf("%d/%d %s %s\r\x1b[A", p.done, p.todoc, hash, expectedCid.String())
+			p.log.Printf("%d/%d (P:%d) %s %s\r\x1b[A", p.done, p.todoc, len(p.processing), hash, expectedCid.String())
 		}
 
 		p.wg.Add()
@@ -148,12 +168,17 @@ func (p *Push) doWork() error {
 			}
 		}()
 
-		err = p.tracker.AddEntry(sha)
+		n, err := p.processLinks(raw, sha)
 		if err != nil {
-			return fmt.Errorf("push/addentry: %v", err)
+			return fmt.Errorf("push/processLinks: %v", err)
 		}
 
-		p.processLinks(raw)
+		if n == 0 {
+			p.todoc++
+			p.todo.PushBack(p.doneFunc(sha))
+		} else {
+			p.processing[string(sha)] = n
+		}
 
 		select {
 		case e := <-p.errCh:
@@ -165,31 +190,56 @@ func (p *Push) doWork() error {
 	return nil
 }
 
-func (p *Push) processLinks(object []byte) error {
+func (p *Push) doneFunc(sha []byte) func() error {
+	return func() error {
+		if err := p.tracker.AddEntry(sha); err != nil {
+			return err
+		}
+		delete(p.processing, string(sha))
+
+		for _, sub := range p.subs[string(sha)] {
+			p.processing[string(sub)]--
+			if p.processing[string(sub)] <= 0 {
+				p.todoc++
+				p.todo.PushBack(p.doneFunc(sub))
+			}
+		}
+		delete(p.subs, string(sha))
+		return nil
+	}
+}
+
+func (p *Push) processLinks(object []byte, selfSha []byte) (int, error) {
 	nd, err := ipldgit.ParseObjectFromBuffer(object)
 	if err != nil {
-		return fmt.Errorf("push/process: %v", err)
+		return 0, fmt.Errorf("push/process: %v", err)
 	}
 
+	var n int
 	links := nd.Links()
 	for _, link := range links {
 		mhash := link.Cid.Hash()
 		decoded, err := mh.Decode(mhash)
 		if err != nil {
-			return fmt.Errorf("push/process: %v", err)
+			return 0, fmt.Errorf("push/process: %v", err)
 		}
 
-		has, err := p.tracker.HasEntry(decoded.Digest)
-		if err != nil {
-			return fmt.Errorf("push/process: %v", err)
+		if _, proc := p.processing[string(decoded.Digest)]; !proc {
+			has, err := p.tracker.HasEntry(decoded.Digest)
+			if err != nil {
+				return 0, fmt.Errorf("push/process: %v", err)
+			}
+
+			if has {
+				continue
+			}
 		}
 
-		if has {
-			continue
-		}
+		p.subs[string(decoded.Digest)] = append(p.subs[string(decoded.Digest)], selfSha)
 
+		n++
 		p.todoc++
 		p.todo.PushBack(hex.EncodeToString(decoded.Digest))
 	}
-	return nil
+	return n, nil
 }

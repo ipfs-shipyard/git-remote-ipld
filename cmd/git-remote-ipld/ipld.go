@@ -103,7 +103,7 @@ func (h *IpnsHandler) loadObjectMap() error {
 	links, err := h.api.List(h.currentHash + "/" + LARGE_OBJECT_DIR)
 	if err != nil {
 		//TODO: Find a better way with coreapi
-		if strings.HasPrefix(err.Error(), `ls: no link named "objects" under`) {
+		if isNoLink(err) {
 			return nil
 		}
 		return err
@@ -159,7 +159,7 @@ func (h *IpnsHandler) List(remote *core.Remote, forPush bool) ([]string, error) 
 			remoteRef := "0000000000000000000000000000000000000000"
 
 			localRef, err := h.api.ResolvePath(path.Join(h.currentHash, ref.Name().String()))
-			if err != nil && !strings.Contains(err.Error(), "no link named") {
+			if err != nil && !isNoLink(err) {
 				return err
 			}
 			if err == nil {
@@ -293,7 +293,7 @@ func (h *IpnsHandler) fillMissingLobjs(tracker *core.Tracker) error {
 func (h *IpnsHandler) getRef(name string) (string, error) {
 	r, err := h.api.Cat(path.Join(h.remoteName, name))
 	if err != nil {
-		if strings.Contains(err.Error(), "cat: no link named") {
+		if isNoLink(err) {
 			return "", nil
 		}
 		return "", err
@@ -337,4 +337,8 @@ func (h *IpnsHandler) paths(api *ipfs.Shell, p string, level int) ([]refPath, er
 		}
 	}
 	return out, nil
+}
+
+func isNoLink(err error) bool {
+	return strings.Contains(err.Error(), "no link named") || strings.Contains(err.Error(), "no link by that name")
 }
