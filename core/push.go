@@ -11,13 +11,13 @@ import (
 	"os/signal"
 	"path"
 
-	mh "gx/ipfs/QmPnFwZ2JXKnXgMw8CdBPxn7FWh6LLdjUjxV1fKHuJnkr8/go-multihash"
-	git "gx/ipfs/QmSVCWSGNwq9Lr1t4uLSMnytyJe4uL7NW7jZ3uas5BPpbX/go-git.v4"
-	plumbing "gx/ipfs/QmSVCWSGNwq9Lr1t4uLSMnytyJe4uL7NW7jZ3uas5BPpbX/go-git.v4/plumbing"
+	cid "gx/ipfs/QmR8BauakNcBa3RbE4nbQu76PDiJgoQgz8AJdhJuiU4TAw/go-cid"
 	sizedwaitgroup "gx/ipfs/QmTRr4W3zT41CJvnoFSmWu9PL9okw99na5XQG1t8JwSWP6/sizedwaitgroup"
-	ipfs "gx/ipfs/QmZBfwm4fRhnk6L5qFKonmJTgVmv7D7LT93ky3WfgKVgxj/go-ipfs-api"
-	cid "gx/ipfs/QmapdYm1b22Frv3k17fqrBYTFRxwiaVJkB299Mfn33edeB/go-cid"
-	ipldgit "gx/ipfs/QmazMphtdhiL37KJjfahQXjKvSNt6gjWqGpTs6KXQcAQ8w/go-ipld-git"
+	ipfs "gx/ipfs/QmabBPe1QjKzxHkvoxZmQJYVGE1FUJXE99pyVnkVemf41z/go-ipfs-api"
+	ipldgit "gx/ipfs/QmanwVNHFVTMvXmvxu4ngaPSNEKDcNbwg35ZZSJBFfmWGt/go-ipld-git"
+	git "gx/ipfs/QmdxE4RzXZ5DCG9tv3gfJDutWTKPpENSxQbmNnkTfwhPjX/go-git.v4"
+	plumbing "gx/ipfs/QmdxE4RzXZ5DCG9tv3gfJDutWTKPpENSxQbmNnkTfwhPjX/go-git.v4/plumbing"
+	mh "gx/ipfs/QmerPMzPk1mJVowm8KgmoknWa4yCYvvugMPsgWmDNUvDLW/go-multihash"
 )
 
 type Push struct {

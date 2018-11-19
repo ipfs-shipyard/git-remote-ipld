@@ -5,7 +5,7 @@ import (
 	"os"
 	"path"
 
-	"gx/ipfs/QmbHorb92LbsEGXK47MevydDCXGKi474EVXb5iiamBQP3N/badger"
+	"gx/ipfs/QmdG6rxQFetuV853nsNQn9EbrUEjQcbPB2htDniuLTQBsg/badger"
 )
 
 //Tracker tracks which hashes are published in IPLD
