@@ -12,7 +12,7 @@ import (
 	ipfs "gx/ipfs/QmabBPe1QjKzxHkvoxZmQJYVGE1FUJXE99pyVnkVemf41z/go-ipfs-api"
 
 	"gx/ipfs/QmR8BauakNcBa3RbE4nbQu76PDiJgoQgz8AJdhJuiU4TAw/go-cid"
-	"gx/ipfs/QmdxE4RzXZ5DCG9tv3gfJDutWTKPpENSxQbmNnkTfwhPjX/go-git.v4/plumbing"
+	"gx/ipfs/QmfRYHUcz9QtXq1KK9dQFqprHcpqCVDjswgZDpbHdTzUUW/go-git.v4/plumbing"
 )
 
 const (
@@ -239,8 +239,8 @@ func (h *IpnsHandler) Push(remote *core.Remote, local string, remoteRef string) 
 
 // bigNodePatcher returns a function which patches large object mapping into
 // the resulting object
-func (h *IpnsHandler) bigNodePatcher(tracker *core.Tracker) func(*cid.Cid, []byte) error {
-	return func(hash *cid.Cid, data []byte) error {
+func (h *IpnsHandler) bigNodePatcher(tracker *core.Tracker) func(cid.Cid, []byte) error {
+	return func(hash cid.Cid, data []byte) error {
 		if len(data) > (1 << 21) {
 			c, err := h.api.Add(bytes.NewReader(data))
 			if err != nil {

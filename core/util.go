@@ -28,16 +28,16 @@ func GetLocalDir() (string, error) {
 	return localdir, nil
 }
 
-func CidFromHex(sha string) (*cid.Cid, error) {
+func CidFromHex(sha string) (cid.Cid, error) {
 	mhash, err := mh.FromHexString("1114" + sha)
 	if err != nil {
-		return nil, err
+		return cid.Undef, err
 	}
 
 	return cid.NewCidV1(0x78, mhash), nil
 }
 
-func HexFromCid(cid *cid.Cid) (string, error) {
+func HexFromCid(cid cid.Cid) (string, error) {
 	if cid.Type() != 0x78 {
 		return "", fmt.Errorf("unexpected cid type %d", cid.Type())
 	}

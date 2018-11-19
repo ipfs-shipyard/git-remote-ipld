@@ -15,9 +15,9 @@ import (
 	sizedwaitgroup "gx/ipfs/QmTRr4W3zT41CJvnoFSmWu9PL9okw99na5XQG1t8JwSWP6/sizedwaitgroup"
 	ipfs "gx/ipfs/QmabBPe1QjKzxHkvoxZmQJYVGE1FUJXE99pyVnkVemf41z/go-ipfs-api"
 	ipldgit "gx/ipfs/QmanwVNHFVTMvXmvxu4ngaPSNEKDcNbwg35ZZSJBFfmWGt/go-ipld-git"
-	git "gx/ipfs/QmdxE4RzXZ5DCG9tv3gfJDutWTKPpENSxQbmNnkTfwhPjX/go-git.v4"
-	plumbing "gx/ipfs/QmdxE4RzXZ5DCG9tv3gfJDutWTKPpENSxQbmNnkTfwhPjX/go-git.v4/plumbing"
 	mh "gx/ipfs/QmerPMzPk1mJVowm8KgmoknWa4yCYvvugMPsgWmDNUvDLW/go-multihash"
+	git "gx/ipfs/QmfRYHUcz9QtXq1KK9dQFqprHcpqCVDjswgZDpbHdTzUUW/go-git.v4"
+	plumbing "gx/ipfs/QmfRYHUcz9QtXq1KK9dQFqprHcpqCVDjswgZDpbHdTzUUW/go-git.v4/plumbing"
 )
 
 type Push struct {
@@ -37,7 +37,7 @@ type Push struct {
 	errCh chan error
 	wg    sizedwaitgroup.SizedWaitGroup
 
-	NewNode func(hash *cid.Cid, data []byte) error
+	NewNode func(hash cid.Cid, data []byte) error
 }
 
 func NewPush(gitDir string, tracker *Tracker, repo *git.Repository) *Push {
