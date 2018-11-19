@@ -2,6 +2,7 @@ package util
 
 import (
 	"bytes"
+	"compress/zlib"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -95,6 +96,54 @@ func CompareFiles(file1, file2 string) error {
 	}
 
 	f2, err := os.Open(file2)
+	if err != nil {
+		return err
+	}
+
+	for {
+		b1 := make([]byte, chunkSize)
+		_, err1 := f1.Read(b1)
+
+		b2 := make([]byte, chunkSize)
+		_, err2 := f2.Read(b2)
+
+		if err1 != nil || err2 != nil {
+			if err1 == io.EOF && err2 == io.EOF {
+				return nil
+			} else if err1 == io.EOF || err2 == io.EOF {
+				f1.Close()
+				f2.Close()
+				return CompareZlib(file1, file2)
+			} else {
+				return err1
+			}
+		}
+
+		if !bytes.Equal(b1, b2) {
+			f1.Close()
+			f2.Close()
+			return CompareZlib(file1, file2)
+		}
+	}
+}
+
+func CompareZlib(file1, file2 string) error {
+	z1, err := os.Open(file1)
+	if err != nil {
+		return err
+	}
+
+	z2, err := os.Open(file2)
+	if err != nil {
+		return err
+	}
+
+	f1, err := zlib.NewReader(z1)
+	if err != nil {
+		return err
+	}
+
+	f2, err := zlib.NewReader(z2)
 	if err != nil {
 		return err
 	}

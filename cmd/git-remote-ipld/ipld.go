@@ -9,10 +9,10 @@ import (
 	"strings"
 
 	core "github.com/ipfs-shipyard/git-remote-ipld/core"
-	ipfs "gx/ipfs/QmZBfwm4fRhnk6L5qFKonmJTgVmv7D7LT93ky3WfgKVgxj/go-ipfs-api"
+	ipfs "gx/ipfs/QmabBPe1QjKzxHkvoxZmQJYVGE1FUJXE99pyVnkVemf41z/go-ipfs-api"
 
-	"gx/ipfs/QmSVCWSGNwq9Lr1t4uLSMnytyJe4uL7NW7jZ3uas5BPpbX/go-git.v4/plumbing"
-	"gx/ipfs/QmapdYm1b22Frv3k17fqrBYTFRxwiaVJkB299Mfn33edeB/go-cid"
+	"gx/ipfs/QmR8BauakNcBa3RbE4nbQu76PDiJgoQgz8AJdhJuiU4TAw/go-cid"
+	"gx/ipfs/QmfRYHUcz9QtXq1KK9dQFqprHcpqCVDjswgZDpbHdTzUUW/go-git.v4/plumbing"
 )
 
 const (
@@ -239,8 +239,8 @@ func (h *IpnsHandler) Push(remote *core.Remote, local string, remoteRef string) 
 
 // bigNodePatcher returns a function which patches large object mapping into
 // the resulting object
-func (h *IpnsHandler) bigNodePatcher(tracker *core.Tracker) func(*cid.Cid, []byte) error {
-	return func(hash *cid.Cid, data []byte) error {
+func (h *IpnsHandler) bigNodePatcher(tracker *core.Tracker) func(cid.Cid, []byte) error {
+	return func(hash cid.Cid, data []byte) error {
 		if len(data) > (1 << 21) {
 			c, err := h.api.Add(bytes.NewReader(data))
 			if err != nil {

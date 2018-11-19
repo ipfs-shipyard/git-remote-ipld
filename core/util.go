@@ -7,8 +7,8 @@ import (
 	"os"
 	"path"
 
-	cid "gx/ipfs/QmapdYm1b22Frv3k17fqrBYTFRxwiaVJkB299Mfn33edeB/go-cid"
-	mh "gx/ipfs/QmPnFwZ2JXKnXgMw8CdBPxn7FWh6LLdjUjxV1fKHuJnkr8/go-multihash"
+	cid "gx/ipfs/QmR8BauakNcBa3RbE4nbQu76PDiJgoQgz8AJdhJuiU4TAw/go-cid"
+	mh "gx/ipfs/QmerPMzPk1mJVowm8KgmoknWa4yCYvvugMPsgWmDNUvDLW/go-multihash"
 )
 
 func compressObject(in []byte) []byte {
@@ -28,16 +28,16 @@ func GetLocalDir() (string, error) {
 	return localdir, nil
 }
 
-func CidFromHex(sha string) (*cid.Cid, error) {
+func CidFromHex(sha string) (cid.Cid, error) {
 	mhash, err := mh.FromHexString("1114" + sha)
 	if err != nil {
-		return nil, err
+		return cid.Undef, err
 	}
 
 	return cid.NewCidV1(0x78, mhash), nil
 }
 
-func HexFromCid(cid *cid.Cid) (string, error) {
+func HexFromCid(cid cid.Cid) (string, error) {
 	if cid.Type() != 0x78 {
 		return "", fmt.Errorf("unexpected cid type %d", cid.Type())
 	}

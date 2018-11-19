@@ -5,7 +5,7 @@ import (
 	"os"
 	"path"
 
-	"gx/ipfs/QmbHorb92LbsEGXK47MevydDCXGKi474EVXb5iiamBQP3N/badger"
+	"gx/ipfs/QmdG6rxQFetuV853nsNQn9EbrUEjQcbPB2htDniuLTQBsg/badger"
 )
 
 //Tracker tracks which hashes are published in IPLD
@@ -48,7 +48,7 @@ func (t *Tracker) Get(refName string) ([]byte, error) {
 		return nil, err
 	}
 
-	return it.Value()
+	return it.ValueCopy(nil)
 }
 
 func (t *Tracker) Set(refName string, hash []byte) error {
@@ -60,7 +60,7 @@ func (t *Tracker) Set(refName string, hash []byte) error {
 		return err
 	}
 
-	return txn.Commit(nil)
+	return txn.Commit()
 }
 
 func (t *Tracker) ListPrefixed(prefix string) (map[string]string, error) {
@@ -74,7 +74,7 @@ func (t *Tracker) ListPrefixed(prefix string) (map[string]string, error) {
 	for it.Seek([]byte(prefix)); it.ValidForPrefix([]byte(prefix)); it.Next() {
 		item := it.Item()
 		k := item.Key()
-		v, err := item.Value()
+		v, err := item.ValueCopy(nil)
 		if err != nil {
 			return nil, err
 		}
@@ -91,7 +91,7 @@ func (t *Tracker) AddEntry(hash []byte) error {
 
 	err := t.txn.Set([]byte(hash), []byte{})
 	if err != nil && err.Error() == badger.ErrTxnTooBig.Error() {
-		if err := t.txn.Commit(nil); err != nil {
+		if err := t.txn.Commit(); err != nil {
 			return fmt.Errorf("commit: %s", err)
 		}
 		t.txn = t.db.NewTransaction(true)
@@ -123,7 +123,7 @@ func (t *Tracker) HasEntry(hash []byte) (bool, error) {
 
 func (t *Tracker) Close() error {
 	if t.txn != nil {
-		if err := t.txn.Commit(nil); err != nil {
+		if err := t.txn.Commit(); err != nil {
 			return err
 		}
 
