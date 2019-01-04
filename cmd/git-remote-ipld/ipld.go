@@ -7,11 +7,13 @@ import (
 	"io/ioutil"
 	"path"
 	"strings"
+	"sync"
 
-	core "github.com/ipfs-shipyard/git-remote-ipld/core"
+	cid "gx/ipfs/QmR8BauakNcBa3RbE4nbQu76PDiJgoQgz8AJdhJuiU4TAw/go-cid"
 	ipfs "gx/ipfs/QmabBPe1QjKzxHkvoxZmQJYVGE1FUJXE99pyVnkVemf41z/go-ipfs-api"
 
-	"gx/ipfs/QmR8BauakNcBa3RbE4nbQu76PDiJgoQgz8AJdhJuiU4TAw/go-cid"
+	core "github.com/ipfs-shipyard/git-remote-ipld/core"
+
 	"gx/ipfs/QmfRYHUcz9QtXq1KK9dQFqprHcpqCVDjswgZDpbHdTzUUW/go-git.v4/plumbing"
 )
 
@@ -242,16 +244,56 @@ func (h *IpnsHandler) Push(remote *core.Remote, local string, remoteRef string) 
 func (h *IpnsHandler) bigNodePatcher(tracker *core.Tracker) func(cid.Cid, []byte) error {
 	return func(hash cid.Cid, data []byte) error {
 		if len(data) > (1 << 21) {
-			c, err := h.api.Add(bytes.NewReader(data))
+			endOfHeader := -1
+			for i := 0; i < len(data); i++ {
+				if data[i] == 0 {
+					endOfHeader = i + 1
+					break
+				}
+			}
+
+			var objectHash string
+			var err error
+			if endOfHeader > 0 {
+				wg := sync.WaitGroup{}
+				wg.Add(2)
+
+				var headerHash string
+				var headerHashErr error
+				go func() {
+					headerHash, headerHashErr = h.api.Add(bytes.NewReader(data[0:endOfHeader]))
+					wg.Done()
+				}()
+
+				var dataHash string
+				var dataHashErr error
+				go func() {
+					dataHash, dataHashErr = h.api.Add(bytes.NewReader(data[endOfHeader:]))
+					wg.Done()
+				}()
+
+				wg.Wait()
+				if headerHashErr != nil {
+					return headerHashErr
+				}
+				if dataHashErr != nil {
+					return dataHashErr
+				}
+
+				objectHash, err = h.api.PatchLink(headerHash, "0", dataHash, false)
+			} else {
+				objectHash, err = h.api.Add(bytes.NewReader(data))
+			}
+
 			if err != nil {
 				return err
 			}
 
-			if err := tracker.Set(LOBJ_TRACKER_PRIFIX+"/"+hash.String(), []byte(c)); err != nil {
+			if err := tracker.Set(LOBJ_TRACKER_PRIFIX+"/"+hash.String(), []byte(objectHash)); err != nil {
 				return err
 			}
 
-			h.currentHash, err = h.api.PatchLink(h.currentHash, "objects/"+hash.String(), c, true)
+			h.currentHash, err = h.api.PatchLink(h.currentHash, "objects/"+hash.String(), objectHash, true)
 			if err != nil {
 				return err
 			}

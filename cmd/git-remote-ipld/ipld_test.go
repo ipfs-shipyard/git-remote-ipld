@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"github.com/ipfs-shipyard/git-remote-ipld/util"
 	"io"
 	"io/ioutil"
 	"log"
@@ -10,6 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/ipfs-shipyard/git-remote-ipld/util"
 )
 
 func TestCapabilities(t *testing.T) {
@@ -17,15 +18,19 @@ func TestCapabilities(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 
 	// git clone ipld::d5b0d08c180fd7a9bf4f684a37e60ceeb4d25ec8
-	args := []string{"git-remote-ipld", "origin", "ipld://QmZVjKhhUrjodywbU4hpCL32M7CR7Sbow2MSqRpB3PGBUe"}
+	args := []string{"git-remote-ipld", "origin", "ipld://QmXUXGmpAJVKs1YWraqtZSbRKX7WamPKy5BqUY5cWEYaDV"}
 
 	listExp := []string{
 		"@refs/heads/master HEAD",
+		"162429cc0dac923dff140ec29247f42a8e362419 refs/heads/french",
+		"78a77abd233c24d8e6a0d0d040c79ae569fc7a19 refs/heads/italian",
+		"8f329544bb70a739a8a65eda1c0aa949a971dede refs/heads/lobj",
 		"d5b0d08c180fd7a9bf4f684a37e60ceeb4d25ec8 refs/heads/master",
 	}
 	listForPushExp := []string{
-		"0000000000000000000000000000000000000000 refs/heads/french",
-		"0000000000000000000000000000000000000000 refs/heads/italian",
+		"162429cc0dac923dff140ec29247f42a8e362419 refs/heads/french",
+		"78a77abd233c24d8e6a0d0d040c79ae569fc7a19 refs/heads/italian",
+		"8f329544bb70a739a8a65eda1c0aa949a971dede refs/heads/lobj",
 		"d5b0d08c180fd7a9bf4f684a37e60ceeb4d25ec8 refs/heads/master",
 	}
 
@@ -34,7 +39,8 @@ func TestCapabilities(t *testing.T) {
 	testCase(t, args, "list for-push", listForPushExp)
 
 	// mock/git> git push --set-upstream ipld:: master
-	testCase(t, args, "push refs/heads/master:refs/heads/master", []string{})
+	testCase(t, args, "push refs/heads/master:refs/heads/master\n", []string{"ok refs/heads/master"})
+	testCase(t, args, "push refs/heads/lobj:refs/heads/lobj\n", []string{"ok refs/heads/lobj"})
 
 	testCase(t, args, "fetch d5b0d08c180fd7a9bf4f684a37e60ceeb4d25ec8 refs/heads/master\n", []string{""})
 	comparePullToMock(t, tmpdir, "git")
