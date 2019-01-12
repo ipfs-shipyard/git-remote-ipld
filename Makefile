@@ -12,5 +12,8 @@ deps: gx
 
 install: all
 	go install -v ./cmd/git-remote-ipld/...
+	
+test:
+	go test -v ./...
 
 .PHONY: all gx deps install
