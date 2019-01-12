@@ -8,7 +8,7 @@ install:
   - go get github.com/whyrusleeping/gx
   - go get github.com/whyrusleeping/gx-go
   - curl https://dist.ipfs.io/go-ipfs/v0.4.18/go-ipfs_v0.4.18_linux-amd64.tar.gz | tar xzv
-  - go-ipfs/ipfs daemon --init&
+  - go-ipfs/ipfs daemon --init --offline&
 script:
   - make test
   
