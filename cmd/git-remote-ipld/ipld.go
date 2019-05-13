@@ -9,10 +9,10 @@ import (
 	"strings"
 
 	core "github.com/ipfs-shipyard/git-remote-ipld/core"
-	ipfs "gx/ipfs/QmabBPe1QjKzxHkvoxZmQJYVGE1FUJXE99pyVnkVemf41z/go-ipfs-api"
+	ipfs "github.com/ipfs/go-ipfs-api"
 
-	"gx/ipfs/QmR8BauakNcBa3RbE4nbQu76PDiJgoQgz8AJdhJuiU4TAw/go-cid"
-	"gx/ipfs/QmfRYHUcz9QtXq1KK9dQFqprHcpqCVDjswgZDpbHdTzUUW/go-git.v4/plumbing"
+	"github.com/ipfs/go-cid"
+	"gopkg.in/src-d/go-git.v4/plumbing"
 )
 
 const (
