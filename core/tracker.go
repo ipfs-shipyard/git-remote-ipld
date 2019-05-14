@@ -5,7 +5,7 @@ import (
 	"os"
 	"path"
 
-	"gx/ipfs/QmdG6rxQFetuV853nsNQn9EbrUEjQcbPB2htDniuLTQBsg/badger"
+	"github.com/dgraph-io/badger"
 )
 
 //Tracker tracks which hashes are published in IPLD
@@ -60,7 +60,7 @@ func (t *Tracker) Set(refName string, hash []byte) error {
 		return err
 	}
 
-	return txn.Commit()
+	return txn.Commit(nil)
 }
 
 func (t *Tracker) ListPrefixed(prefix string) (map[string]string, error) {
@@ -91,7 +91,7 @@ func (t *Tracker) AddEntry(hash []byte) error {
 
 	err := t.txn.Set([]byte(hash), []byte{})
 	if err != nil && err.Error() == badger.ErrTxnTooBig.Error() {
-		if err := t.txn.Commit(); err != nil {
+		if err := t.txn.Commit(nil); err != nil {
 			return fmt.Errorf("commit: %s", err)
 		}
 		t.txn = t.db.NewTransaction(true)
@@ -123,7 +123,7 @@ func (t *Tracker) HasEntry(hash []byte) (bool, error) {
 
 func (t *Tracker) Close() error {
 	if t.txn != nil {
-		if err := t.txn.Commit(); err != nil {
+		if err := t.txn.Commit(nil); err != nil {
 			return err
 		}
 

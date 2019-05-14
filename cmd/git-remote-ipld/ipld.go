@@ -9,16 +9,18 @@ import (
 	"strings"
 
 	core "github.com/ipfs-shipyard/git-remote-ipld/core"
-	ipfs "gx/ipfs/QmabBPe1QjKzxHkvoxZmQJYVGE1FUJXE99pyVnkVemf41z/go-ipfs-api"
+	ipfs "github.com/ipfs/go-ipfs-api"
 
-	"gx/ipfs/QmR8BauakNcBa3RbE4nbQu76PDiJgoQgz8AJdhJuiU4TAw/go-cid"
-	"gx/ipfs/QmfRYHUcz9QtXq1KK9dQFqprHcpqCVDjswgZDpbHdTzUUW/go-git.v4/plumbing"
+	"github.com/ipfs/go-cid"
+	"gopkg.in/src-d/go-git.v4/plumbing"
 )
 
 const (
 	LARGE_OBJECT_DIR    = "objects"
 	LOBJ_TRACKER_PRIFIX = "//lobj"
+)
 
+const (
 	REFPATH_HEAD = iota
 	REFPATH_REF
 )
@@ -330,7 +332,7 @@ func (h *IpnsHandler) paths(api *ipfs.Shell, p string, level int) ([]refPath, er
 			out = append(out, sub...)
 		case ipfs.TFile:
 			out = append(out, refPath{path.Join(p, link.Name), REFPATH_REF, link.Hash})
-		case -1: //unknown, assume git node
+		case -1, 0: //unknown, assume git node
 			out = append(out, refPath{path.Join(p, link.Name), REFPATH_HEAD, link.Hash})
 		default:
 			return nil, fmt.Errorf("unexpected link type %d", link.Type)

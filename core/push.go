@@ -11,13 +11,13 @@ import (
 	"os/signal"
 	"path"
 
-	cid "gx/ipfs/QmR8BauakNcBa3RbE4nbQu76PDiJgoQgz8AJdhJuiU4TAw/go-cid"
-	sizedwaitgroup "gx/ipfs/QmTRr4W3zT41CJvnoFSmWu9PL9okw99na5XQG1t8JwSWP6/sizedwaitgroup"
-	ipfs "gx/ipfs/QmabBPe1QjKzxHkvoxZmQJYVGE1FUJXE99pyVnkVemf41z/go-ipfs-api"
-	ipldgit "gx/ipfs/QmanwVNHFVTMvXmvxu4ngaPSNEKDcNbwg35ZZSJBFfmWGt/go-ipld-git"
-	mh "gx/ipfs/QmerPMzPk1mJVowm8KgmoknWa4yCYvvugMPsgWmDNUvDLW/go-multihash"
-	git "gx/ipfs/QmfRYHUcz9QtXq1KK9dQFqprHcpqCVDjswgZDpbHdTzUUW/go-git.v4"
-	plumbing "gx/ipfs/QmfRYHUcz9QtXq1KK9dQFqprHcpqCVDjswgZDpbHdTzUUW/go-git.v4/plumbing"
+	cid "github.com/ipfs/go-cid"
+	ipfs "github.com/ipfs/go-ipfs-api"
+	ipldgit "github.com/ipfs/go-ipld-git"
+	mh "github.com/multiformats/go-multihash"
+	sizedwaitgroup "github.com/remeh/sizedwaitgroup"
+	git "gopkg.in/src-d/go-git.v4"
+	plumbing "gopkg.in/src-d/go-git.v4/plumbing"
 )
 
 type Push struct {
