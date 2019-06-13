@@ -20,7 +20,7 @@ Note: Some features like remote tracking are still missing, though the plugin is
 quite usable. IPNS helper is WIP and doesn't yet do what it should
 
 ## Installation
-1. `go get github.com/magik6k/git-remote-ipld`
+1. `go get github.com/ipfs-shipyard/git-remote-ipld`
 2. `make install`
 3. Done
 5. Make sure you run go-ipfs 0.4.17 or newer as you need git support
