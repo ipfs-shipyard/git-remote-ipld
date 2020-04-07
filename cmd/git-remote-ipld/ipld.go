@@ -2,9 +2,7 @@ package main
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
-	"io/ioutil"
 	"path"
 	"strings"
 	"log"
@@ -42,7 +40,7 @@ type IpnsHandler struct {
 
 	largeObjs map[string]string
 
-	log     *log.Logger
+	log *log.Logger
 
 	didPush bool
 }
@@ -50,7 +48,7 @@ type IpnsHandler struct {
 func (h *IpnsHandler) Initialize(remote *core.Remote) error {
 	h.api = ipfs.NewLocalShell()
 	h.currentHash = h.remoteName
-	h.log = log.New(os.Stderr, "handler: ", 0)
+	h.log = log.New(os.Stderr, "\x1b[32mhandler:\x1b[39m ", 0)
 	h.log.Println("Starting Object Hash: ", h.currentHash)
 	return nil
 }
@@ -58,10 +56,6 @@ func (h *IpnsHandler) Initialize(remote *core.Remote) error {
 func (h *IpnsHandler) Finish(remote *core.Remote) error {
 	//TODO: publish
 	if h.didPush {
-		if err := h.fillMissingLobjs(remote.Tracker); err != nil {
-			return err
-		}
-
 		remote.Logger.Printf("Pushed to IPFS as \x1b[32mipld://%s\x1b[39m\n", h.currentHash)
 	}
 	return nil
@@ -69,63 +63,6 @@ func (h *IpnsHandler) Finish(remote *core.Remote) error {
 
 func (h *IpnsHandler) GetRemoteName() string {
 	return h.remoteName
-}
-
-func (h *IpnsHandler) ProvideBlock(cid string, tracker *core.Tracker) ([]byte, error) {
-	if h.largeObjs == nil {
-		if err := h.loadObjectMap(); err != nil {
-			return nil, err
-		}
-	}
-
-	mappedCid, ok := h.largeObjs[cid]
-	if !ok {
-		return nil, core.ErrNotProvided
-	}
-
-	if err := tracker.Set(LOBJ_TRACKER_PRIFIX+"/"+cid, []byte(mappedCid)); err != nil {
-		return nil, err
-	}
-
-	r, err := h.api.Cat(fmt.Sprintf("/ipfs/%s", mappedCid))
-	if err != nil {
-		return nil, errors.New("cat error")
-	}
-
-	data, err := ioutil.ReadAll(r)
-	if err != nil {
-		return nil, err
-	}
-
-	realCid, err := h.api.DagPut(data, "raw", "git")
-	if err != nil {
-		return nil, err
-	}
-
-	if realCid != cid {
-		return nil, fmt.Errorf("unexpected cid for provided block %s != %s", realCid, cid)
-	}
-
-	return data, nil
-}
-
-func (h *IpnsHandler) loadObjectMap() error {
-	h.largeObjs = map[string]string{}
-
-	links, err := h.api.List(h.currentHash + "/" + LARGE_OBJECT_DIR)
-	if err != nil {
-		//TODO: Find a better way with coreapi
-		if isNoLink(err) {
-			return nil
-		}
-		return err
-	}
-
-	for _, link := range links {
-		h.largeObjs[link.Name] = link.Hash
-	}
-
-	return nil
 }
 
 func (h *IpnsHandler) List(remote *core.Remote, forPush bool) ([]string, error) {
@@ -216,9 +153,6 @@ func (h *IpnsHandler) Push(remote *core.Remote, local string, remoteRef string) 
 	remote.Logger.Println("IpnsHandler.Push#local == ", local)
 
 	push := remote.NewPush()
-	remote.Logger.Println("IpnsHandler.Push#bigNodePatcher")
-	push.NewNode = h.bigNodePatcher(remote.Tracker)
-
 	remote.Logger.Println("IpnsHandler.Push#PushHash: ", headHash)
 	shunt, err := push.PushHash(headHash, remote)
 	remote.Logger.Println("IpnsHandler.Push#shunt == ", shunt)
@@ -237,9 +171,13 @@ func (h *IpnsHandler) Push(remote *core.Remote, local string, remoteRef string) 
 	tree, err := commit.Tree()
 	files := tree.Files()
 	for leaf, _ := files.Next(); leaf != nil; leaf, _ = files.Next() {
-		c, _ := core.CidFromHex(leaf.Hash.String())
-		remote.Logger.Printf("Remote.repo %s => %s (%s)\n", leaf.Name, leaf.Hash, shunts[c.String()])
-		h.currentHash, err = h.api.PatchLink(h.currentHash, "content/" + leaf.Name, shunts[c.String()], true)
+		refId, ok := shunts[leaf.Hash.String()]
+		remote.Logger.Printf("Remote.repo %s => %s (%s)\n", leaf.Name, leaf.Hash, refId)
+		if ok {
+			h.currentHash, err = h.api.PatchLink(h.currentHash, "content/" + leaf.Name, refId, true)
+		} else {
+			remote.Logger.Println("Couldn't Find Blob: ", leaf.Hash)
+		}
 	}
 
 	h.currentHash, err = h.api.PatchLink(h.currentHash, "blobs", shunt, true)
@@ -251,7 +189,7 @@ func (h *IpnsHandler) Push(remote *core.Remote, local string, remoteRef string) 
 
 	remote.Logger.Println("IpnsHandler.Push#localRef.Hash() == ", hash)
 	
-	remote.Tracker.Set(remoteRef, (&hash)[:])
+	remote.Tracker.AddEntry(hash.String(), shunts[hash.String()])
 
 	c, err := core.CidFromHex(headHash)
 	if err != nil {
@@ -287,61 +225,6 @@ func (h *IpnsHandler) Push(remote *core.Remote, local string, remoteRef string) 
 	}
 
 	return local, nil
-}
-
-// bigNodePatcher returns a function which patches large object mapping into
-// the resulting object
-func (h *IpnsHandler) bigNodePatcher(tracker *core.Tracker) func(cid.Cid, []byte) error {
-	h.log.Println("IpnsHandler#bigNodePatcher")
-
-	return func(hash cid.Cid, data []byte) error {
-		if len(data) > (1 << 21) {
-			c, err := h.api.Add(bytes.NewReader(data))
-			if err != nil {
-				return err
-			}
-
-			if err := tracker.Set(LOBJ_TRACKER_PRIFIX+"/"+hash.String(), []byte(c)); err != nil {
-				return err
-			}
-
-			h.currentHash, err = h.api.PatchLink(h.currentHash, "objects/"+hash.String(), c, true)
-			if err != nil {
-				return err
-			}
-		}
-
-		return nil
-	}
-}
-
-func (h *IpnsHandler) fillMissingLobjs(tracker *core.Tracker) error {
-	if h.largeObjs == nil {
-		if err := h.loadObjectMap(); err != nil {
-			return err
-		}
-	}
-
-	tracked, err := tracker.ListPrefixed(LOBJ_TRACKER_PRIFIX)
-	if err != nil {
-		return err
-	}
-
-	for k, v := range tracked {
-		if _, has := h.largeObjs[k]; has {
-			continue
-		}
-
-		k = strings.TrimPrefix(k, LOBJ_TRACKER_PRIFIX+"/")
-
-		h.largeObjs[k] = v
-		h.currentHash, err = h.api.PatchLink(h.currentHash, "objects/"+k, v, true)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
 }
 
 func (h *IpnsHandler) getCid(cid string) (string, error) {

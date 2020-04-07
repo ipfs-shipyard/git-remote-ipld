@@ -13,6 +13,7 @@ require (
 	github.com/ipfs/go-ipld-git v0.0.2
 	github.com/mdempsky/gocode v0.0.0-20200405233807-4acdcbdea79d // indirect
 	github.com/multiformats/go-multihash v0.0.5
+	github.com/ramya-rao-a/go-outline v0.0.0-20200117021646-2a048b4510eb // indirect
 	github.com/remeh/sizedwaitgroup v0.0.0-20180822144253-5e7302b12cce
 	gopkg.in/src-d/go-git.v4 v4.11.0
 )

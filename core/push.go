@@ -11,7 +11,6 @@ import (
 	"os/signal"
 	"path"
 
-	cid "github.com/ipfs/go-cid"
 	ipfs "github.com/ipfs/go-ipfs-api"
 	ipldgit "github.com/ipfs/go-ipld-git"
 	mh "github.com/multiformats/go-multihash"
@@ -24,21 +23,20 @@ type Push struct {
 	objectDir string
 	gitDir    string
 
-	done    uint64
-	todoc   uint64
-	todo    *list.List
-	log     *log.Logger
-	tracker *Tracker
-	repo    *git.Repository
+	done      uint64
+	todoc     uint64
+	todo      *list.List
+	log       *log.Logger
+	tracker   *Tracker
+	repo      *git.Repository
 	shuntHash string
+	shunts    map[string]string
 
 	processing map[string]int
-	subs       map[string][][]byte
+	subs       map[string][]string
 
 	errCh chan error
 	wg    sizedwaitgroup.SizedWaitGroup
-
-	NewNode func(hash cid.Cid, data []byte) error
 }
 
 func NewPush(gitDir string, tracker *Tracker, repo *git.Repository) *Push {
@@ -51,10 +49,11 @@ func NewPush(gitDir string, tracker *Tracker, repo *git.Repository) *Push {
 		tracker: tracker,
 		repo:    repo,
 		todoc:   1,
+		shunts:   make(map[string]string),
 		shuntHash: "QmUNLLsPACCz1vLxQVkXqqLX5R1X345qqfHbsf67hvA3Nn",
 
 		processing: map[string]int{},
-		subs:       map[string][][]byte{},
+		subs:       make(map[string][]string),
 
 		wg:    sizedwaitgroup.New(512),
 		errCh: make(chan error),
@@ -63,11 +62,11 @@ func NewPush(gitDir string, tracker *Tracker, repo *git.Repository) *Push {
 
 func (p *Push) PushHash(hash string, remote *Remote) (string, error) {
 	p.todo.PushFront(hash)
-	res, err := p.doWork()
+	res, err := p.doWork(remote)
 	return res, err
 }
 
-func (p *Push) doWork() (string, error) {
+func (p *Push) doWork(remote *Remote) (string, error) {
 	defer p.wg.Wait()
 
 	api := ipfs.NewLocalShell()
@@ -96,18 +95,19 @@ func (p *Push) doWork() (string, error) {
 			return "", fmt.Errorf("push: %v", err)
 		}
 
-		_, processing := p.processing[string(sha)]
+		_, processing := p.processing[hash]
 		if processing {
 			p.todoc--
 			continue
 		}
 
-		has, err := p.tracker.HasEntry(sha)
+		entry, err := p.tracker.Entry(hash)
 		if err != nil {
 			return "", fmt.Errorf("push/process: %v", err)
 		}
 
-		if has {
+		if entry != "" {
+			p.log.Println("Cache Hit: ", entry)
 			p.todoc--
 			continue
 		}
@@ -145,9 +145,9 @@ func (p *Push) doWork() (string, error) {
 				return "", fmt.Errorf("push: %v", err)
 			}
 			contentid, _ := api.Add(rawReader)
-			p.shuntHash, _ = api.PatchLink(p.shuntHash, expectedCid.String(), contentid, true)
-			p.log.Printf("Adding ID: %s (%s)\n", contentid, expectedCid)
-			p.log.Printf("  Shunt == %s)\n", p.shuntHash)
+			p.shunts[hash] = contentid
+			p.shuntHash, _ = api.PatchLink(p.shuntHash, hash, contentid, true)
+			p.log.Printf("Adding ID: %s (%s)\n", hash, p.shuntHash)
 			raw = append([]byte(fmt.Sprintf("blob %d\x00", obj.Size())), raw...)
 			isBlob = true
 		case plumbing.TagObject:
@@ -171,22 +171,20 @@ func (p *Push) doWork() (string, error) {
 					return
 				}
 
-				p.log.Printf("Finished Block Put: %s ==? %s\n", res, expectedCid)
-
 				if expectedCid.String() != res {
 					p.errCh <- fmt.Errorf("CIDs don't match: expected %s, got %s", expectedCid, res)
 					return
 				}
-			}
 
-			if p.NewNode != nil {
-				if err := p.NewNode(expectedCid, raw); err != nil {
-					p.errCh <- fmt.Errorf("newNode: %s", err)
-					return
+				if err := remote.Tracker.AddEntry(hash, res); err != nil {
+					p.errCh <- fmt.Errorf("push/put: %v", err)
 				}
 			}
+
+			p.log.Printf("Finished Block Put: %s\n", hash)
 		}()
 
+		p.log.Printf("Push#doWork.processLinks(): %s\n", hash)
 		n, err := p.processLinks(raw, sha)
 		if err != nil {
 			return "", fmt.Errorf("push/processLinks: %v", err)
@@ -194,7 +192,7 @@ func (p *Push) doWork() (string, error) {
 
 		if n == 0 {
 			p.todoc++
-			p.todo.PushBack(p.doneFunc(sha))
+			p.todo.PushBack(p.doneFunc(hash, p.shunts[hash]))
 		} else {
 			p.processing[string(sha)] = n
 		}
@@ -209,21 +207,22 @@ func (p *Push) doWork() (string, error) {
 	return p.shuntHash, nil
 }
 
-func (p *Push) doneFunc(sha []byte) func() error {
+func (p *Push) doneFunc(hash string, c string) func() error {
+	p.log.Printf("Push#doneFunc.sha == %s (%s)\n", hash, p.shunts[hash])
 	return func() error {
-		if err := p.tracker.AddEntry(sha); err != nil {
+		if err := p.tracker.AddEntry(hash, p.shunts[hash]); err != nil {
 			return err
 		}
-		delete(p.processing, string(sha))
+		delete(p.processing, hash)
 
-		for _, sub := range p.subs[string(sha)] {
-			p.processing[string(sub)]--
-			if p.processing[string(sub)] <= 0 {
+		for _, sub := range p.subs[hash] {
+			p.processing[sub]--
+			if p.processing[sub] <= 0 {
 				p.todoc++
-				p.todo.PushBack(p.doneFunc(sub))
+				p.todo.PushBack(p.doneFunc(sub, p.shunts[sub]))
 			}
 		}
-		delete(p.subs, string(sha))
+		delete(p.subs, hash)
 		return nil
 	}
 }
@@ -243,18 +242,24 @@ func (p *Push) processLinks(object []byte, selfSha []byte) (int, error) {
 			return 0, fmt.Errorf("push/process: %v", err)
 		}
 
-		if _, proc := p.processing[string(decoded.Digest)]; !proc {
-			has, err := p.tracker.HasEntry(decoded.Digest)
+		hash := hex.EncodeToString(decoded.Digest)
+		p.log.Println("Push#Links.hash == ", hash)
+
+		if _, proc := p.processing[hash]; !proc {
+			entry, err := p.tracker.Entry(hash)
 			if err != nil {
 				return 0, fmt.Errorf("push/process: %v", err)
 			}
 
-			if has {
+			if entry != "" {
 				continue
 			}
 		}
 
-		p.subs[string(decoded.Digest)] = append(p.subs[string(decoded.Digest)], selfSha)
+		p.log.Println("Push#processLinks.hash == ", hash)
+
+		//p.subs[string(decoded.Digest)] = append(p.subs[string(decoded.Digest)], selfSha)
+		p.subs[hash] = append(p.subs[hash], hex.EncodeToString(selfSha))
 
 		n++
 		p.todoc++

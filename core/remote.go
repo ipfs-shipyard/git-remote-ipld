@@ -2,7 +2,6 @@ package core
 
 import (
 	"bufio"
-	"encoding/hex"
 	"fmt"
 	"io"
 	"log"
@@ -21,8 +20,6 @@ type RemoteHandler interface {
 
 	Initialize(remote *Remote) error
 	Finish(remote *Remote) error
-
-	ProvideBlock(cid string, tracker *Tracker) ([]byte, error)
 }
 
 type Remote struct {
@@ -79,7 +76,7 @@ func NewRemote(handler RemoteHandler, reader io.Reader, writer io.Writer, logger
 		Handler: handler,
 	}
 
-	logger.Printf("Created Remote: %s\n", remote)
+	logger.Println("Created Remote: ", localDir)
 
 	if err := handler.Initialize(remote); err != nil {
 		return nil, err
@@ -99,7 +96,7 @@ func (r *Remote) NewPush() *Push {
 }
 
 func (r *Remote) NewFetch() *Fetch {
-	return NewFetch(r.localDir, r.Tracker, r.Handler.ProvideBlock)
+	return NewFetch(r.localDir, r.Tracker)
 }
 
 func (r *Remote) Close() error {
@@ -118,20 +115,20 @@ func (r *Remote) push(src, dst string, force bool) {
 	})
 }
 
-func (r *Remote) fetch(sha, ref string) {
+func (r *Remote) fetch(hash string, ref string) {
 	r.todo = append(r.todo, func() (string, error) {
 		fetch := r.NewFetch()
-		err := fetch.FetchHash(sha, r)
+		err := fetch.FetchHash(hash, r)
 		if err != nil {
 			return "", fmt.Errorf("command fetch: %v", err)
 		}
 
-		sha, err := hex.DecodeString(sha)
-		if err != nil {
-			return "", fmt.Errorf("fetch: %v", err)
-		}
+		// sha, err := hex.DecodeString(sha)
+		// if err != nil {
+			// return "", fmt.Errorf("fetch: %v", err)
+		// }
 
-		r.Tracker.Set(ref, sha)
+		r.Tracker.AddEntry(hash, fetch.shunts[hash])
 		return "", nil
 	})
 }

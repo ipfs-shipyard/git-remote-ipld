@@ -4,28 +4,28 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"log"
 
 	"github.com/dgraph-io/badger/v2"
 )
 
 //Tracker tracks which hashes are published in IPLD
 type Tracker struct {
-	db *badger.DB
-
+	db  *badger.DB
 	txn *badger.Txn
+	log *log.Logger
 }
 
 func NewTracker(gitPath string) (*Tracker, error) {
+	log := log.New(os.Stderr, "tracker: ", 0)
 	ipldDir := path.Join(gitPath, "ipld")
-	fmt.Printf("Make IPLD Dir: %s\n", ipldDir)
+	log.Printf("Make IPLD Dir: %s\n", ipldDir)
 	err := os.MkdirAll(ipldDir, 0755)
 	if err != nil {
 		return nil, err
 	}
 
 	opt := badger.DefaultOptions(ipldDir)
-	fmt.Printf("Badger Options: %s\n", opt)
-
 	fmt.Printf("Starting Badger\n")
 	db, err := badger.Open(opt)
 	fmt.Printf("Started Badger\n")
@@ -34,70 +34,25 @@ func NewTracker(gitPath string) (*Tracker, error) {
 	}
 
 	return &Tracker{
-		db: db,
+		log: log,
+		db:  db,
 	}, nil
 }
 
-func (t *Tracker) Get(refName string) ([]byte, error) {
-	txn := t.db.NewTransaction(false)
-	defer txn.Discard()
 
-	it, err := txn.Get([]byte(refName))
-	if err == badger.ErrKeyNotFound {
-		return nil, nil
-	}
-	if err != nil {
-		return nil, err
-	}
-
-	return it.ValueCopy(nil)
-}
-
-func (t *Tracker) Set(refName string, hash []byte) error {
-	txn := t.db.NewTransaction(true)
-	defer txn.Discard()
-
-	err := txn.Set([]byte(refName), hash)
-	if err != nil {
-		return err
-	}
-
-	return txn.Commit()
-}
-
-func (t *Tracker) ListPrefixed(prefix string) (map[string]string, error) {
-	out := map[string]string{}
-
-	txn := t.db.NewTransaction(false)
-	defer txn.Discard()
-
-	it := txn.NewIterator(badger.DefaultIteratorOptions)
-	defer it.Close()
-	for it.Seek([]byte(prefix)); it.ValidForPrefix([]byte(prefix)); it.Next() {
-		item := it.Item()
-		k := item.Key()
-		v, err := item.ValueCopy(nil)
-		if err != nil {
-			return nil, err
-		}
-		out[string(k)] = string(v)
-	}
-
-	return out, nil
-}
-
-func (t *Tracker) AddEntry(hash []byte) error {
+func (t *Tracker) AddEntry(hash string, c string) error {
 	if t.txn == nil {
 		t.txn = t.db.NewTransaction(true)
 	}
 
-	err := t.txn.Set([]byte(hash), []byte{})
+	err := t.txn.Set([]byte(hash), []byte(c))
 	if err != nil && err.Error() == badger.ErrTxnTooBig.Error() {
 		if err := t.txn.Commit(); err != nil {
 			return fmt.Errorf("commit: %s", err)
 		}
 		t.txn = t.db.NewTransaction(true)
-		if err := t.txn.Set([]byte(hash), []byte{}); err != nil {
+		t.log.Printf("Tracker#AddEntry.txn.Set %s ⏩ %s\n", hash, c)
+		if err := t.txn.Set([]byte(hash), []byte(c)); err != nil {
 			return err
 		}
 	} else if err != nil {
@@ -107,20 +62,26 @@ func (t *Tracker) AddEntry(hash []byte) error {
 	return nil
 }
 
-func (t *Tracker) HasEntry(hash []byte) (bool, error) {
+func (t *Tracker) Entry(hash string) (string, error) {
 	if t.txn == nil {
 		t.txn = t.db.NewTransaction(true)
 	}
 
-	_, err := t.txn.Get(hash)
+	t.log.Println("Checking Cache: ", hash)
+
+	ret, err := t.txn.Get([]byte(hash))
 	if err == badger.ErrKeyNotFound {
-		return false, nil
+		return "", nil
 	}
 	if err != nil {
-		return false, err
+		return "", err
 	}
 
-	return true, nil
+	cBytes, err := ret.ValueCopy(nil)
+	c := string(cBytes)
+	t.log.Println("Cache Got: ", c)
+
+	return c, nil
 }
 
 func (t *Tracker) Close() error {

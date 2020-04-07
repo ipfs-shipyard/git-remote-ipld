@@ -37,14 +37,14 @@ type Fetch struct {
 	wg     sizedwaitgroup.SizedWaitGroup
 	doneCh chan []byte
 
-	shunt map[string]string
+	shunts map[string]string
 	fsLk *sync.Mutex
 
 	provider ObjectProvider
 	api      *ipfs.Shell
 }
 
-func NewFetch(gitDir string, tracker *Tracker, provider ObjectProvider) *Fetch {
+func NewFetch(gitDir string, tracker *Tracker) *Fetch {
 	return &Fetch{
 		objectDir: path.Join(gitDir, "objects"),
 		gitDir:    gitDir,
@@ -60,9 +60,8 @@ func NewFetch(gitDir string, tracker *Tracker, provider ObjectProvider) *Fetch {
 		todo:   make(chan string),
 		errCh:  make(chan error),
 		doneCh: make(chan []byte),
-
-		provider: provider,
-		api:      ipfs.NewLocalShell(),
+		
+		api: ipfs.NewLocalShell(),
 	}
 }
 
@@ -70,12 +69,12 @@ func (f *Fetch) FetchHash(base string, remote *Remote) error {
 	go func() {
 		f.todo <- base
 	}()
-	shunt, _ := f.api.List(remote.Handler.GetRemoteName() + "/blobs")
-	f.shunt = make(map[string]string)
-	for _, s := range shunt {
-		f.shunt[s.Name] = s.Hash
+	shunts, _ := f.api.List(remote.Handler.GetRemoteName() + "/blobs")
+	f.shunts = make(map[string]string)
+	for _, s := range shunts {
+		f.shunts[s.Name] = s.Hash
 	}
-	f.log.Printf("Shunt! %s (%s)\n", f.shunt, remote.Handler.GetRemoteName() + "/blobs")
+	f.log.Printf("Shunt! %s\n", remote.Handler.GetRemoteName() + "/blobs")
 	return f.doWork()
 }
 
@@ -121,17 +120,18 @@ func (f *Fetch) processSingle(hash string) error {
 		return fmt.Errorf("fetch: %v", err)
 	}
 
-	has, err := f.tracker.HasEntry(sha)
+	entry, err := f.tracker.Entry(hash)
 	if err != nil {
 		return err
 	}
-	if has {
+	if entry != "" {
+		f.log.Println("Fetch Cache Found: ", hash)
 		f.todoc--
 		return nil
 	}
 
 	// Need to do this early
-	if err := f.tracker.AddEntry(sha); err != nil {
+	if err := f.tracker.AddEntry(hash, f.shunts[hash]); err != nil {
 		return fmt.Errorf("fetch: %v", err)
 	}
 
@@ -156,7 +156,7 @@ func (f *Fetch) processSingle(hash string) error {
 				return
 			}
 
-			shunt, ok := f.shunt[c]
+			shunt, ok := f.shunts[c]
 			f.log.Printf("Fetch#BlockGet == %s (%s)\n", c, shunt)
 			if ok {
 				f.log.Println("Fetch#BlockGet// shunted == ", c)

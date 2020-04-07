@@ -1,2 +1,3 @@
 cmd/git-remote-ipns/git-remote-ipns
 cmd/git-remote-ipld/git-remote-ipld
+log/*

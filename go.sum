@@ -136,6 +136,8 @@ github.com/pkg/errors v0.8.0/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINE
 github.com/pkg/errors v0.8.1 h1:iURUrRGxPUNPdy5/HRSm+Yj6okJ6UtLINN0Q9M4+h3I=
 github.com/pkg/errors v0.8.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
+github.com/ramya-rao-a/go-outline v0.0.0-20200117021646-2a048b4510eb h1:ilZSL4VaIq4Hsi+lH928xQKnSWymFug6r2gJomUBpW8=
+github.com/ramya-rao-a/go-outline v0.0.0-20200117021646-2a048b4510eb/go.mod h1:1WL5IqM+CnRCAbXetRnL1YVoS9KtU2zMhOi/5oAVPo4=
 github.com/remeh/sizedwaitgroup v0.0.0-20180822144253-5e7302b12cce h1:aP+C+YbHZfOQlutA4p4soHi7rVUqHQdWEVMSkHfDTqY=
 github.com/remeh/sizedwaitgroup v0.0.0-20180822144253-5e7302b12cce/go.mod h1:3j2R4OIe/SeS6YDhICBy22RWjJC5eNCJ1V+9+NVNYlo=
 github.com/russross/blackfriday v1.5.2/go.mod h1:JO/DiYxRf+HjHt06OyowR9PTA263kcR/rfWxYHBV53g=
