@@ -7,6 +7,8 @@ import (
 	"io/ioutil"
 	"path"
 	"strings"
+	"log"
+	"os"
 
 	core "github.com/ipfs-shipyard/git-remote-ipld/core"
 	ipfs "github.com/ipfs/go-ipfs-api"
@@ -40,12 +42,15 @@ type IpnsHandler struct {
 
 	largeObjs map[string]string
 
+	log     *log.Logger
+
 	didPush bool
 }
 
 func (h *IpnsHandler) Initialize(remote *core.Remote) error {
 	h.api = ipfs.NewLocalShell()
 	h.currentHash = h.remoteName
+	h.log = log.New(os.Stderr, "handler: ", 0)
 	return nil
 }
 
@@ -119,6 +124,7 @@ func (h *IpnsHandler) loadObjectMap() error {
 }
 
 func (h *IpnsHandler) List(remote *core.Remote, forPush bool) ([]string, error) {
+	h.log.Println("IpnsHandler.List: forPush ==", forPush)
 	out := make([]string, 0)
 	if !forPush {
 		refs, err := h.paths(h.api, h.remoteName, 0)
@@ -191,6 +197,8 @@ func (h *IpnsHandler) List(remote *core.Remote, forPush bool) ([]string, error) 
 func (h *IpnsHandler) Push(remote *core.Remote, local string, remoteRef string) (string, error) {
 	h.didPush = true
 
+	remote.Logger.Println("IpnsHandler.Push")
+
 	localRef, err := remote.Repo.Reference(plumbing.ReferenceName(local), true)
 	if err != nil {
 		return "", fmt.Errorf("command push: %v", err)
@@ -198,15 +206,22 @@ func (h *IpnsHandler) Push(remote *core.Remote, local string, remoteRef string) 
 
 	headHash := localRef.Hash().String()
 
+	remote.Logger.Println("IpnsHandler.Push#local == ", local)
+
 	push := remote.NewPush()
+	remote.Logger.Println("IpnsHandler.Push#bigNodePatcher")
 	push.NewNode = h.bigNodePatcher(remote.Tracker)
 
+	remote.Logger.Println("IpnsHandler.Push#PushHash: ", headHash)
 	err = push.PushHash(headHash)
 	if err != nil {
 		return "", fmt.Errorf("command push: %v", err)
 	}
 
 	hash := localRef.Hash()
+
+	remote.Logger.Println("IpnsHandler.Push#localRef.Hash() == ", hash)
+	
 	remote.Tracker.Set(remoteRef, (&hash)[:])
 
 	c, err := core.CidFromHex(headHash)
@@ -214,11 +229,17 @@ func (h *IpnsHandler) Push(remote *core.Remote, local string, remoteRef string) 
 		return "", fmt.Errorf("push: %v", err)
 	}
 
+	remote.Logger.Println("IpnsHandler.Push#cid == ", c)
+
 	//patch object
+	remote.Logger.Printf("ipfs/object/patch/add-link %s %s %s %b\n", h.currentHash, remoteRef, c, true)
+
 	h.currentHash, err = h.api.PatchLink(h.currentHash, remoteRef, c.String(), true)
 	if err != nil {
 		return "", fmt.Errorf("push: %v", err)
 	}
+
+	remote.Logger.Println("Post Patch currentHash == ", h.currentHash)
 
 	head, err := h.getRef("HEAD")
 	if err != nil {
@@ -242,6 +263,8 @@ func (h *IpnsHandler) Push(remote *core.Remote, local string, remoteRef string) 
 // bigNodePatcher returns a function which patches large object mapping into
 // the resulting object
 func (h *IpnsHandler) bigNodePatcher(tracker *core.Tracker) func(cid.Cid, []byte) error {
+	h.log.Println("IpnsHandler#bigNodePatcher")
+
 	return func(hash cid.Cid, data []byte) error {
 		if len(data) > (1 << 21) {
 			c, err := h.api.Add(bytes.NewReader(data))

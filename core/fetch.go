@@ -72,6 +72,7 @@ func (f *Fetch) FetchHash(base string) error {
 }
 
 func (f *Fetch) doWork() error {
+	f.log.Println("Fetch#doWork")
 	for {
 		select {
 		case err := <-f.errCh:
@@ -96,12 +97,15 @@ func (f *Fetch) doWork() error {
 }
 
 func (f *Fetch) processSingle(hash string) error {
+	f.log.Println("Fetch#processSingle.hash == ", hash)
 	mhash, err := mh.FromHexString("1114" + hash)
 	if err != nil {
 		return fmt.Errorf("fetch: %v", err)
 	}
 
 	c := cid.NewCidV1(cid.GitRaw, mhash).String()
+
+	f.log.Println("Fetch#processSingle.cid == ", c)
 
 	sha, err := hex.DecodeString(hash)
 	if err != nil {
@@ -134,12 +138,16 @@ func (f *Fetch) processSingle(hash string) error {
 			return
 		}
 
+		f.log.Println("Fetch#prepHashPath == ", hash)
+
 		object, err := f.provider(c, f.tracker)
 		if err != nil {
 			if err != ErrNotProvided {
 				f.errCh <- err
 				return
 			}
+
+			f.log.Println("Fetch#BlockGet == ", c)
 
 			object, err = f.api.BlockGet(c)
 			if err != nil {
@@ -148,17 +156,23 @@ func (f *Fetch) processSingle(hash string) error {
 			}
 		}
 
+		f.log.Println("Fetch#processLinks")
+
 		f.processLinks(object)
+
+		f.log.Println("Fetch#processedLinks")
 
 		object = compressObject(object)
 
-		/////////////////
+		f.log.Println("Fetch#writing: ", *objectPath)
 
 		err = ioutil.WriteFile(*objectPath, object, 0444)
 		if err != nil {
 			f.errCh <- fmt.Errorf("fetch: %v", err)
 			return
 		}
+
+		f.log.Println("Fetch#wrote: ", *objectPath)
 
 		//TODO: see if moving this higher would help
 		f.doneCh <- sha
@@ -168,6 +182,7 @@ func (f *Fetch) processSingle(hash string) error {
 }
 
 func (f *Fetch) processLinks(object []byte) error {
+	f.log.Println("len(Fetch#processLinks.object) == ", len(object))
 	nd, err := ipldgit.ParseObjectFromBuffer(object)
 	if err != nil {
 		return fmt.Errorf("fetch: %v", err)
@@ -178,8 +193,11 @@ func (f *Fetch) processLinks(object []byte) error {
 		mhash := link.Cid.Hash()
 		hash := mhash.HexString()[4:]
 
+		f.log.Println("Fetch#processLinks.hash == ", hash)
+
 		f.todo <- hash
 	}
+	f.log.Println("End Fetch#processLinks")
 	return nil
 }
 

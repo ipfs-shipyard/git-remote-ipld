@@ -20,7 +20,10 @@ func compressObject(in []byte) []byte {
 }
 
 func GetLocalDir() (string, error) {
+	fmt.Printf("GIT_DIR: %s\n", os.Getenv("GIT_DIR"))
 	localdir := path.Join(os.Getenv("GIT_DIR"))
+
+	fmt.Printf("Creating: %s\n", localdir)
 
 	if err := os.MkdirAll(localdir, 0755); err != nil {
 		return "", err

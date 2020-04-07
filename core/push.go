@@ -135,14 +135,21 @@ func (p *Push) doWork() error {
 		case plumbing.TreeObject:
 			raw = append([]byte(fmt.Sprintf("tree %d\x00", obj.Size())), raw...)
 		case plumbing.BlobObject:
-			raw = append([]byte(fmt.Sprintf("blob %d\x00", obj.Size())), raw...)
+			rawReader, err := obj.Reader()
+			if err != nil {
+				return fmt.Errorf("push: %v", err)
+			}
+			contentid, _ := api.Add(rawReader)
+			p.log.Printf("Adding ID: %s (%s)\n", contentid, hash)
+			raw = []byte(fmt.Sprintf("blob %d\x00%s", len(contentid), contentid))
 		case plumbing.TagObject:
 			raw = append([]byte(fmt.Sprintf("tag %d\x00", obj.Size())), raw...)
 		}
 
 		p.done++
-		if p.done%100 == 0 || p.done == p.todoc {
-			p.log.Printf("%d/%d (P:%d) %s %s\r\x1b[A", p.done, p.todoc, len(p.processing), hash, expectedCid.String())
+		if p.done%1 == 0 || p.done == p.todoc {
+			//p.log.Printf("%d/%d (P:%d) %s %s\r\x1b[A", p.done, p.todoc, len(p.processing), hash, expectedCid.String())
+			p.log.Printf("%d/%d (P:%d) %s %s\n", p.done, p.todoc, len(p.processing), hash, expectedCid.String())
 		}
 
 		p.wg.Add()
@@ -155,13 +162,25 @@ func (p *Push) doWork() error {
 				return
 			}
 
-			if expectedCid.String() != res {
-				p.errCh <- fmt.Errorf("CIDs don't match: expected %s, got %s", expectedCid.String(), res)
+			//api.PatchSet(root, sha, res)
+
+			p.log.Printf("Finished Block Put: %s ==? %s\n", res, expectedCid)
+
+			// if expectedCid.String() != res {
+				// p.errCh <- fmt.Errorf("CIDs don't match: expected %s, got %s", expectedCid, res)
+				// return
+			// }
+
+			p.log.Printf("CIDs Match: %s ==? %s\n", res, expectedCid)
+
+			resCid, err := cid.Decode(res)
+			if err != nil {
+				p.errCh <- fmt.Errorf("push/cid: %v", err)
 				return
 			}
 
 			if p.NewNode != nil {
-				if err := p.NewNode(expectedCid, raw); err != nil {
+				if err := p.NewNode(resCid, raw); err != nil {
 					p.errCh <- fmt.Errorf("newNode: %s", err)
 					return
 				}

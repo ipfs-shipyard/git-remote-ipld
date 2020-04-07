@@ -38,12 +38,18 @@ type Remote struct {
 }
 
 func NewRemote(handler RemoteHandler, reader io.Reader, writer io.Writer, logger *log.Logger) (*Remote, error) {
+	if logger == nil {
+		logger = log.New(os.Stderr, "", 0)
+	}
+
 	localDir, err := GetLocalDir()
+	logger.Printf("Instantiating New 'Remote': %s\n", localDir)
 	if err != nil {
 		return nil, err
 	}
 
 	repo, err := git.PlainOpen(localDir)
+	logger.Printf("Remote.repo: %s\n", repo)
 	if err == git.ErrWorktreeNotProvided {
 		repoRoot, _ := path.Split(localDir)
 
@@ -54,12 +60,9 @@ func NewRemote(handler RemoteHandler, reader io.Reader, writer io.Writer, logger
 	}
 
 	tracker, err := NewTracker(localDir)
+	logger.Printf("Remote#Got Tracker\n")
 	if err != nil {
 		return nil, fmt.Errorf("fetch: %v", err)
-	}
-
-	if logger == nil {
-		logger = log.New(os.Stderr, "", 0)
 	}
 
 	remote := &Remote{
@@ -74,6 +77,8 @@ func NewRemote(handler RemoteHandler, reader io.Reader, writer io.Writer, logger
 		Handler: handler,
 	}
 
+	logger.Printf("Created Remote: %s\n", remote)
+
 	if err := handler.Initialize(remote); err != nil {
 		return nil, err
 	}
@@ -87,6 +92,7 @@ func (r *Remote) Printf(format string, a ...interface{}) (n int, err error) {
 }
 
 func (r *Remote) NewPush() *Push {
+	r.Logger.Println("Creating New Push")
 	return NewPush(r.localDir, r.Tracker, r.Repo)
 }
 
@@ -99,6 +105,7 @@ func (r *Remote) Close() error {
 }
 
 func (r *Remote) push(src, dst string, force bool) {
+	r.Logger.Println("Remote#push.src == ", src)
 	r.todo = append(r.todo, func() (string, error) {
 		done, err := r.Handler.Push(r, src, dst)
 		if err != nil {
@@ -128,6 +135,7 @@ func (r *Remote) fetch(sha, ref string) {
 }
 
 func (r *Remote) ProcessCommands() error {
+	r.Logger.Printf("Processing Commands\n")
 	reader := bufio.NewReader(r.reader)
 loop:
 	for {

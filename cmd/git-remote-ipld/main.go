@@ -18,8 +18,10 @@ const (
 )
 
 func Main(args []string, reader io.Reader, writer io.Writer, logger *log.Logger) error {
+	fmt.Printf("Program Starting\n")
+
 	if len(args) < 3 {
-		return fmt.Errorf("Usage: git-remote-ipns remote-name url")
+		return fmt.Errorf("Usage: git-remote-ipld remote-name url")
 	}
 
 	remoteName := args[2]
@@ -32,6 +34,7 @@ func Main(args []string, reader io.Reader, writer io.Writer, logger *log.Logger)
 	}
 
 	remote, err := core.NewRemote(&IpnsHandler{remoteName: remoteName}, reader, writer, logger)
+	fmt.Println("Remote Created")
 	if err != nil {
 		return err
 	}
