@@ -61,9 +61,10 @@ func NewPush(gitDir string, tracker *Tracker, repo *git.Repository) *Push {
 	}
 }
 
-func (p *Push) PushHash(hash string) (string, error) {
+func (p *Push) PushHash(hash string, remote *Remote) (string, error) {
 	p.todo.PushFront(hash)
-	return p.doWork()
+	res, err := p.doWork()
+	return res, err
 }
 
 func (p *Push) doWork() (string, error) {

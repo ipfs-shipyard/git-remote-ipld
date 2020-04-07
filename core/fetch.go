@@ -159,7 +159,7 @@ func (f *Fetch) processSingle(hash string) error {
 			shunt, ok := f.shunt[c]
 			f.log.Printf("Fetch#BlockGet == %s (%s)\n", c, shunt)
 			if ok {
-				f.log.Println("Fetch#BlockGet// special == ", c)
+				f.log.Println("Fetch#BlockGet// shunted == ", c)
 				r, _ := f.api.Cat(shunt)
 				defer r.Close()
 				buff := new(bytes.Buffer)

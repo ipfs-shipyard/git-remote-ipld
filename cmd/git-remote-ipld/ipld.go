@@ -220,10 +220,26 @@ func (h *IpnsHandler) Push(remote *core.Remote, local string, remoteRef string) 
 	push.NewNode = h.bigNodePatcher(remote.Tracker)
 
 	remote.Logger.Println("IpnsHandler.Push#PushHash: ", headHash)
-	shunt, err := push.PushHash(headHash)
+	shunt, err := push.PushHash(headHash, remote)
 	remote.Logger.Println("IpnsHandler.Push#shunt == ", shunt)
 	if err != nil {
 		return "", fmt.Errorf("command push: %v", err)
+	}
+
+	keyedShunts, _ := h.api.List(shunt)
+	shunts := make(map[string]string)
+	for _, s := range keyedShunts {
+		shunts[s.Name] = s.Hash
+	}
+
+	head, err := remote.Repo.Head()
+	commit, err := remote.Repo.CommitObject(head.Hash())
+	tree, err := commit.Tree()
+	files := tree.Files()
+	for leaf, _ := files.Next(); leaf != nil; leaf, _ = files.Next() {
+		c, _ := core.CidFromHex(leaf.Hash.String())
+		remote.Logger.Printf("Remote.repo %s => %s (%s)\n", leaf.Name, leaf.Hash, shunts[c.String()])
+		h.currentHash, err = h.api.PatchLink(h.currentHash, "content/" + leaf.Name, shunts[c.String()], true)
 	}
 
 	h.currentHash, err = h.api.PatchLink(h.currentHash, "blobs", shunt, true)
@@ -254,11 +270,11 @@ func (h *IpnsHandler) Push(remote *core.Remote, local string, remoteRef string) 
 
 	remote.Logger.Println("Post Patch currentHash == ", h.currentHash)
 
-	head, err := h.getRef("HEAD")
+	gotHead, err := h.getRef("HEAD")
 	if err != nil {
 		return "", fmt.Errorf("push: %v", err)
 	}
-	if head == "" {
+	if gotHead == "" {
 		headRef, err := h.api.Add(strings.NewReader("refs/heads/master")) //TODO: Make this smarter?
 		if err != nil {
 			return "", fmt.Errorf("push: %v", err)
