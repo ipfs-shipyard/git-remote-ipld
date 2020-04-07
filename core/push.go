@@ -129,6 +129,8 @@ func (p *Push) doWork() error {
 			return fmt.Errorf("push: %v", err)
 		}
 
+		isBlob := false
+
 		switch obj.Type() {
 		case plumbing.CommitObject:
 			raw = append([]byte(fmt.Sprintf("commit %d\x00", obj.Size())), raw...)
@@ -140,8 +142,10 @@ func (p *Push) doWork() error {
 				return fmt.Errorf("push: %v", err)
 			}
 			contentid, _ := api.Add(rawReader)
-			p.log.Printf("Adding ID: %s (%s)\n", contentid, hash)
-			raw = []byte(fmt.Sprintf("blob %d\x00%s", len(contentid), contentid))
+			p.log.Printf("Adding ID: %s (%s)\n", contentid, expectedCid)
+			//api.PatchLink(contentid)
+			raw = append([]byte(fmt.Sprintf("blob %d\x00", obj.Size())), raw...)
+			isBlob = true
 		case plumbing.TagObject:
 			raw = append([]byte(fmt.Sprintf("tag %d\x00", obj.Size())), raw...)
 		}
@@ -156,31 +160,27 @@ func (p *Push) doWork() error {
 		go func() {
 			defer p.wg.Done()
 
-			res, err := api.BlockPut(raw, "git-raw", "sha1", -1)
-			if err != nil {
-				p.errCh <- fmt.Errorf("push/put: %v", err)
-				return
-			}
+			if !isBlob {
+				res, err := api.BlockPut(raw, "git-raw", "sha1", -1)
+				if err != nil {
+					p.errCh <- fmt.Errorf("push/put: %v", err)
+					return
+				}
 
-			//api.PatchSet(root, sha, res)
+				//api.PatchSet(root, sha, res)
 
-			p.log.Printf("Finished Block Put: %s ==? %s\n", res, expectedCid)
+				p.log.Printf("Finished Block Put: %s ==? %s\n", res, expectedCid)
 
-			// if expectedCid.String() != res {
-				// p.errCh <- fmt.Errorf("CIDs don't match: expected %s, got %s", expectedCid, res)
-				// return
-			// }
+				// if expectedCid.String() != res {
+					// p.errCh <- fmt.Errorf("CIDs don't match: expected %s, got %s", expectedCid, res)
+					// return
+				// }
 
-			p.log.Printf("CIDs Match: %s ==? %s\n", res, expectedCid)
-
-			resCid, err := cid.Decode(res)
-			if err != nil {
-				p.errCh <- fmt.Errorf("push/cid: %v", err)
-				return
+				p.log.Printf("CIDs Match: %s ==? %s\n", res, expectedCid)
 			}
 
 			if p.NewNode != nil {
-				if err := p.NewNode(resCid, raw); err != nil {
+				if err := p.NewNode(expectedCid, raw); err != nil {
 					p.errCh <- fmt.Errorf("newNode: %s", err)
 					return
 				}
