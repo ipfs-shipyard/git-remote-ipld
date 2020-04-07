@@ -154,8 +154,9 @@ func (f *Fetch) processSingle(hash string) error {
 				f.log.Println("Fetch#BlockGet// special == ", c)
 				r, _ := f.api.Cat("QmeomffUNfmQy76CQGy9NdmqEnnHU9soCexBnGU3ezPHVH")
 				defer r.Close()
-				out := new(bytes.Buffer)
-				out.ReadFrom(r)
+				buff := new(bytes.Buffer)
+				buff.ReadFrom(r)
+				out := buff.String()
 				object = append([]byte(fmt.Sprintf("blob %d\x00", len(out))), out...)
 			} else if c == "baf4bcfgq4ir6prruwru7irqer6x652jvoiowwiq" {
 				f.log.Println("Fetch#BlockGet// special 2 == ", c)

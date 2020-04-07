@@ -10,7 +10,7 @@ import (
 	"log"
 	"os"
 
-	core "github.com/ipfs-shipyard/git-remote-ipld/core"
+	core "github.com/dhappy/git-remote-ipld/core"
 	ipfs "github.com/ipfs/go-ipfs-api"
 
 	"github.com/ipfs/go-cid"
@@ -215,7 +215,8 @@ func (h *IpnsHandler) Push(remote *core.Remote, local string, remoteRef string) 
 	push.NewNode = h.bigNodePatcher(remote.Tracker)
 
 	remote.Logger.Println("IpnsHandler.Push#PushHash: ", headHash)
-	err = push.PushHash(headHash)
+	shunt, err = push.PushHash(headHash)
+	remote.Logger.Println("IpnsHandler.Push#shunt == ", shunt)
 	if err != nil {
 		return "", fmt.Errorf("command push: %v", err)
 	}

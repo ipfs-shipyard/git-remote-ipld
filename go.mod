@@ -1,4 +1,4 @@
-module github.com/ipfs-shipyard/git-remote-ipld
+module github.com/dhappy/git-remote-ipld
 
 go 1.12
 

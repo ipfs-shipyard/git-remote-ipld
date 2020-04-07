@@ -30,6 +30,7 @@ type Push struct {
 	log     *log.Logger
 	tracker *Tracker
 	repo    *git.Repository
+	shuntHash string
 
 	processing map[string]int
 	subs       map[string][][]byte
@@ -50,7 +51,7 @@ func NewPush(gitDir string, tracker *Tracker, repo *git.Repository) *Push {
 		tracker: tracker,
 		repo:    repo,
 		todoc:   1,
-		shuntHash: EMPTY_REPO,
+		shuntHash: "QmUNLLsPACCz1vLxQVkXqqLX5R1X345qqfHbsf67hvA3Nn",
 
 		processing: map[string]int{},
 		subs:       map[string][][]byte{},
@@ -81,7 +82,7 @@ func (p *Push) doWork() (string, error) {
 	for e := p.todo.Front(); e != nil; e = e.Next() {
 		if df, ok := e.Value.(func() error); ok {
 			if err := df(); err != nil {
-				return err
+				return "", err
 			}
 			p.todoc--
 			continue
@@ -91,7 +92,7 @@ func (p *Push) doWork() (string, error) {
 
 		sha, err := hex.DecodeString(hash)
 		if err != nil {
-			return fmt.Errorf("push: %v", err)
+			return "", fmt.Errorf("push: %v", err)
 		}
 
 		_, processing := p.processing[string(sha)]
@@ -102,7 +103,7 @@ func (p *Push) doWork() (string, error) {
 
 		has, err := p.tracker.HasEntry(sha)
 		if err != nil {
-			return fmt.Errorf("push/process: %v", err)
+			return "", fmt.Errorf("push/process: %v", err)
 		}
 
 		if has {
@@ -112,22 +113,22 @@ func (p *Push) doWork() (string, error) {
 
 		expectedCid, err := CidFromHex(hash)
 		if err != nil {
-			return fmt.Errorf("push: %v", err)
+			return "", fmt.Errorf("push: %v", err)
 		}
 
 		obj, err := p.repo.Storer.EncodedObject(plumbing.AnyObject, plumbing.NewHash(hash))
 		if err != nil {
-			return fmt.Errorf("push/getObject(%s): %v", hash, err)
+			return "", fmt.Errorf("push/getObject(%s): %v", hash, err)
 		}
 
 		rawReader, err := obj.Reader()
 		if err != nil {
-			return fmt.Errorf("push: %v", err)
+			return "", fmt.Errorf("push: %v", err)
 		}
 
 		raw, err := ioutil.ReadAll(rawReader)
 		if err != nil {
-			return fmt.Errorf("push: %v", err)
+			return "", fmt.Errorf("push: %v", err)
 		}
 
 		isBlob := false
@@ -140,11 +141,11 @@ func (p *Push) doWork() (string, error) {
 		case plumbing.BlobObject:
 			rawReader, err := obj.Reader()
 			if err != nil {
-				return fmt.Errorf("push: %v", err)
+				return "", fmt.Errorf("push: %v", err)
 			}
 			contentid, _ := api.Add(rawReader)
 			p.log.Printf("Adding ID: %s (%s)\n", contentid, expectedCid)
-			p.shuntHash = api.PatchLink(p.shuntHash, expectedCid, contentid)
+			p.shuntHash, _ = api.PatchLink(p.shuntHash, expectedCid.String(), contentid, true)
 			raw = append([]byte(fmt.Sprintf("blob %d\x00", obj.Size())), raw...)
 			isBlob = true
 		case plumbing.TagObject:
@@ -186,7 +187,7 @@ func (p *Push) doWork() (string, error) {
 
 		n, err := p.processLinks(raw, sha)
 		if err != nil {
-			return fmt.Errorf("push/processLinks: %v", err)
+			return "", fmt.Errorf("push/processLinks: %v", err)
 		}
 
 		if n == 0 {
@@ -198,13 +199,13 @@ func (p *Push) doWork() (string, error) {
 
 		select {
 		case e := <-p.errCh:
-			return nil, e
+			return "", e
 		default:
 			return p.shuntHash, nil
 		}
 	}
 	p.log.Printf("\n")
-	return nil
+	return p.shuntHash, nil
 }
 
 func (p *Push) doneFunc(sha []byte) func() error {

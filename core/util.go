@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"strings"
 
 	cid "github.com/ipfs/go-cid"
 	mh "github.com/multiformats/go-multihash"
