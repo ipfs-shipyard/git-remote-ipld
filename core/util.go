@@ -19,6 +19,11 @@ func compressObject(in []byte) []byte {
 	return b.Bytes()
 }
 
+func isNoLink(err error) bool {
+	return strings.Contains(err.Error(), "no link named") || strings.Contains(err.Error(), 
+"no link by that name")
+}
+
 func GetLocalDir() (string, error) {
 	fmt.Printf("GIT_DIR: %s\n", os.Getenv("GIT_DIR"))
 	localdir := path.Join(os.Getenv("GIT_DIR"))

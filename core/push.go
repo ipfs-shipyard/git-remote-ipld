@@ -50,6 +50,7 @@ func NewPush(gitDir string, tracker *Tracker, repo *git.Repository) *Push {
 		tracker: tracker,
 		repo:    repo,
 		todoc:   1,
+		shuntHash: EMPTY_REPO,
 
 		processing: map[string]int{},
 		subs:       map[string][][]byte{},
@@ -59,12 +60,12 @@ func NewPush(gitDir string, tracker *Tracker, repo *git.Repository) *Push {
 	}
 }
 
-func (p *Push) PushHash(hash string) error {
+func (p *Push) PushHash(hash string) (string, error) {
 	p.todo.PushFront(hash)
 	return p.doWork()
 }
 
-func (p *Push) doWork() error {
+func (p *Push) doWork() (string, error) {
 	defer p.wg.Wait()
 
 	api := ipfs.NewLocalShell()
@@ -143,7 +144,7 @@ func (p *Push) doWork() error {
 			}
 			contentid, _ := api.Add(rawReader)
 			p.log.Printf("Adding ID: %s (%s)\n", contentid, expectedCid)
-			//api.PatchLink(contentid)
+			p.shuntHash = api.PatchLink(p.shuntHash, expectedCid, contentid)
 			raw = append([]byte(fmt.Sprintf("blob %d\x00", obj.Size())), raw...)
 			isBlob = true
 		case plumbing.TagObject:
@@ -167,16 +168,12 @@ func (p *Push) doWork() error {
 					return
 				}
 
-				//api.PatchSet(root, sha, res)
-
 				p.log.Printf("Finished Block Put: %s ==? %s\n", res, expectedCid)
 
-				// if expectedCid.String() != res {
-					// p.errCh <- fmt.Errorf("CIDs don't match: expected %s, got %s", expectedCid, res)
-					// return
-				// }
-
-				p.log.Printf("CIDs Match: %s ==? %s\n", res, expectedCid)
+				if expectedCid.String() != res {
+					p.errCh <- fmt.Errorf("CIDs don't match: expected %s, got %s", expectedCid, res)
+					return
+				}
 			}
 
 			if p.NewNode != nil {
@@ -201,8 +198,9 @@ func (p *Push) doWork() error {
 
 		select {
 		case e := <-p.errCh:
-			return e
+			return nil, e
 		default:
+			return p.shuntHash, nil
 		}
 	}
 	p.log.Printf("\n")

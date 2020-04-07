@@ -51,6 +51,7 @@ func (h *IpnsHandler) Initialize(remote *core.Remote) error {
 	h.api = ipfs.NewLocalShell()
 	h.currentHash = h.remoteName
 	h.log = log.New(os.Stderr, "handler: ", 0)
+	h.log.Println("Starting Object Hash: ", h.currentHash)
 	return nil
 }
 
@@ -133,6 +134,7 @@ func (h *IpnsHandler) List(remote *core.Remote, forPush bool) ([]string, error) 
 		}
 
 		for _, ref := range refs {
+			h.log.Println("IPNSHandler#List.ref.path == ", ref.path)
 			switch ref.rType {
 			case REFPATH_HEAD:
 				r := path.Join(strings.Split(ref.path, "/")[1:]...)
@@ -197,7 +199,7 @@ func (h *IpnsHandler) List(remote *core.Remote, forPush bool) ([]string, error) 
 func (h *IpnsHandler) Push(remote *core.Remote, local string, remoteRef string) (string, error) {
 	h.didPush = true
 
-	remote.Logger.Println("IpnsHandler.Push")
+	remote.Logger.Println("IpnsHandler.Push.local == ", local)
 
 	localRef, err := remote.Repo.Reference(plumbing.ReferenceName(local), true)
 	if err != nil {
@@ -315,8 +317,8 @@ func (h *IpnsHandler) fillMissingLobjs(tracker *core.Tracker) error {
 	return nil
 }
 
-func (h *IpnsHandler) getRef(name string) (string, error) {
-	r, err := h.api.Cat(path.Join(h.remoteName, name))
+func (h *IpnsHandler) getCid(cid string) (string, error) {
+	r, err := h.api.Cat(cid)
 	if err != nil {
 		if isNoLink(err) {
 			return "", nil
@@ -332,6 +334,10 @@ func (h *IpnsHandler) getRef(name string) (string, error) {
 	}
 
 	return buf.String(), nil
+}
+
+func (h *IpnsHandler) getRef(name string) (string, error) {
+	return h.getCid(path.Join(h.remoteName, name))
 }
 
 func (h *IpnsHandler) paths(api *ipfs.Shell, p string, level int) ([]refPath, error) {
@@ -362,8 +368,4 @@ func (h *IpnsHandler) paths(api *ipfs.Shell, p string, level int) ([]refPath, er
 		}
 	}
 	return out, nil
-}
-
-func isNoLink(err error) bool {
-	return strings.Contains(err.Error(), "no link named") || strings.Contains(err.Error(), "no link by that name")
 }

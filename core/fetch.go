@@ -9,6 +9,7 @@ import (
 	"os"
 	"path"
 	"sync"
+	"bytes"
 
 	"github.com/ipfs/go-cid"
 	ipfs "github.com/ipfs/go-ipfs-api"
@@ -151,11 +152,10 @@ func (f *Fetch) processSingle(hash string) error {
 
 			if c == "baf4bcfe5v2x3tbsm6qyfllutx2yk7vwh2fcl7ja" {
 				f.log.Println("Fetch#BlockGet// special == ", c)
-				cat, _ := f.api.Cat("QmeomffUNfmQy76CQGy9NdmqEnnHU9soCexBnGU3ezPHVH")
-				buff := make([]byte, 999999999)
-				length, _ := cat.Read(buff)
-				f.log.Println(" 1 Read Size: ", length)
-				out := buff[:length]
+				r, _ := f.api.Cat("QmeomffUNfmQy76CQGy9NdmqEnnHU9soCexBnGU3ezPHVH")
+				defer r.Close()
+				out := new(bytes.Buffer)
+				out.ReadFrom(r)
 				object = append([]byte(fmt.Sprintf("blob %d\x00", len(out))), out...)
 			} else if c == "baf4bcfgq4ir6prruwru7irqer6x652jvoiowwiq" {
 				f.log.Println("Fetch#BlockGet// special 2 == ", c)
