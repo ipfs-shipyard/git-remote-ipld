@@ -87,7 +87,8 @@ func (f *Fetch) doWork() error {
 			f.done++
 		}
 
-		f.log.Printf("%d/%d\r\x1b[A", f.done, f.todoc)
+		//f.log.Printf("%d/%d\r\x1b[A", f.done, f.todoc)
+		f.log.Printf("%d/%d\n", f.done, f.todoc)
 
 		if f.done == f.todoc {
 			f.wg.Wait()

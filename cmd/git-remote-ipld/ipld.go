@@ -215,10 +215,15 @@ func (h *IpnsHandler) Push(remote *core.Remote, local string, remoteRef string) 
 	push.NewNode = h.bigNodePatcher(remote.Tracker)
 
 	remote.Logger.Println("IpnsHandler.Push#PushHash: ", headHash)
-	shunt, err = push.PushHash(headHash)
+	shunt, err := push.PushHash(headHash)
 	remote.Logger.Println("IpnsHandler.Push#shunt == ", shunt)
 	if err != nil {
 		return "", fmt.Errorf("command push: %v", err)
+	}
+
+	h.currentHash, err = h.api.PatchLink(h.currentHash, "blobs", shunt, true)
+	if err != nil {
+		return "", fmt.Errorf("push: %v", err)
 	}
 
 	hash := localRef.Hash()
@@ -355,11 +360,14 @@ func (h *IpnsHandler) paths(api *ipfs.Shell, p string, level int) ([]refPath, er
 				continue
 			}
 
-			sub, err := h.paths(api, path.Join(p, link.Name), level+1)
-			if err != nil {
-				return nil, err
+			h.log.Println("Recursing: ", link.Name)
+			if link.Name == "heads" || link.Name == "refs" {
+				sub, err := h.paths(api, path.Join(p, link.Name), level + 1)
+				if err != nil {
+					return nil, err
+				}
+				out = append(out, sub...)
 			}
-			out = append(out, sub...)
 		case ipfs.TFile:
 			out = append(out, refPath{path.Join(p, link.Name), REFPATH_REF, link.Hash})
 		case -1, 0: //unknown, assume git node
@@ -369,4 +377,9 @@ func (h *IpnsHandler) paths(api *ipfs.Shell, p string, level int) ([]refPath, er
 		}
 	}
 	return out, nil
+}
+
+func isNoLink(err error) bool {
+	return strings.Contains(err.Error(), "no link named") || strings.Contains(err.Error(), 
+"no link by that name")
 }

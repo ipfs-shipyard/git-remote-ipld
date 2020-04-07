@@ -144,8 +144,9 @@ func (p *Push) doWork() (string, error) {
 				return "", fmt.Errorf("push: %v", err)
 			}
 			contentid, _ := api.Add(rawReader)
-			p.log.Printf("Adding ID: %s (%s)\n", contentid, expectedCid)
 			p.shuntHash, _ = api.PatchLink(p.shuntHash, expectedCid.String(), contentid, true)
+			p.log.Printf("Adding ID: %s (%s)\n", contentid, expectedCid)
+			p.log.Printf("  Shunt == %s)\n", p.shuntHash)
 			raw = append([]byte(fmt.Sprintf("blob %d\x00", obj.Size())), raw...)
 			isBlob = true
 		case plumbing.TagObject:
@@ -201,7 +202,6 @@ func (p *Push) doWork() (string, error) {
 		case e := <-p.errCh:
 			return "", e
 		default:
-			return p.shuntHash, nil
 		}
 	}
 	p.log.Printf("\n")
