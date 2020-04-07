@@ -67,6 +67,10 @@ func (h *IpnsHandler) Finish(remote *core.Remote) error {
 	return nil
 }
 
+func (h *IpnsHandler) GetRemoteName() string {
+	return h.remoteName
+}
+
 func (h *IpnsHandler) ProvideBlock(cid string, tracker *core.Tracker) ([]byte, error) {
 	if h.largeObjs == nil {
 		if err := h.loadObjectMap(); err != nil {
@@ -128,6 +132,7 @@ func (h *IpnsHandler) List(remote *core.Remote, forPush bool) ([]string, error) 
 	h.log.Println("IpnsHandler.List: forPush ==", forPush)
 	out := make([]string, 0)
 	if !forPush {
+		h.log.Println("Starting Paths with: ", h.remoteName)
 		refs, err := h.paths(h.api, h.remoteName, 0)
 		if err != nil {
 			return nil, err
@@ -347,10 +352,12 @@ func (h *IpnsHandler) getRef(name string) (string, error) {
 }
 
 func (h *IpnsHandler) paths(api *ipfs.Shell, p string, level int) ([]refPath, error) {
+	h.log.Println("IPNSHandler.paths: ", p)
 	links, err := api.List(p)
 	if err != nil {
 		return nil, err
 	}
+	h.log.Println("IPNSHandler.paths.links: ", links)
 
 	out := make([]refPath, 0)
 	for _, link := range links {
@@ -360,7 +367,7 @@ func (h *IpnsHandler) paths(api *ipfs.Shell, p string, level int) ([]refPath, er
 				continue
 			}
 
-			h.log.Println("Recursing: ", link.Name)
+			h.log.Println("Recursing?: ", link.Name)
 			if link.Name == "heads" || link.Name == "refs" {
 				sub, err := h.paths(api, path.Join(p, link.Name), level + 1)
 				if err != nil {

@@ -37,6 +37,7 @@ type Fetch struct {
 	wg     sizedwaitgroup.SizedWaitGroup
 	doneCh chan []byte
 
+	shunt map[string]string
 	fsLk *sync.Mutex
 
 	provider ObjectProvider
@@ -65,10 +66,16 @@ func NewFetch(gitDir string, tracker *Tracker, provider ObjectProvider) *Fetch {
 	}
 }
 
-func (f *Fetch) FetchHash(base string) error {
+func (f *Fetch) FetchHash(base string, remote *Remote) error {
 	go func() {
 		f.todo <- base
 	}()
+	shunt, _ := f.api.List(remote.Handler.GetRemoteName() + "/blobs")
+	f.shunt = make(map[string]string)
+	for _, s := range shunt {
+		f.shunt[s.Name] = s.Hash
+	}
+	f.log.Printf("Shunt! %s (%s)\n", f.shunt, remote.Handler.GetRemoteName() + "/blobs")
 	return f.doWork()
 }
 
@@ -149,23 +156,15 @@ func (f *Fetch) processSingle(hash string) error {
 				return
 			}
 
-			f.log.Println("Fetch#BlockGet == ", c)
-
-			if c == "baf4bcfe5v2x3tbsm6qyfllutx2yk7vwh2fcl7ja" {
+			shunt, ok := f.shunt[c]
+			f.log.Printf("Fetch#BlockGet == %s (%s)\n", c, shunt)
+			if ok {
 				f.log.Println("Fetch#BlockGet// special == ", c)
-				r, _ := f.api.Cat("QmeomffUNfmQy76CQGy9NdmqEnnHU9soCexBnGU3ezPHVH")
+				r, _ := f.api.Cat(shunt)
 				defer r.Close()
 				buff := new(bytes.Buffer)
 				buff.ReadFrom(r)
 				out := buff.String()
-				object = append([]byte(fmt.Sprintf("blob %d\x00", len(out))), out...)
-			} else if c == "baf4bcfgq4ir6prruwru7irqer6x652jvoiowwiq" {
-				f.log.Println("Fetch#BlockGet// special 2 == ", c)
-				cat, _ := f.api.Cat("QmWqCMdHA5RVgB9fWzFyy1ijgQNWZYYP1jXznMeELLZqjp")
-				buff := make([]byte, 999999999)
-				length, _ := cat.Read(buff)
-				f.log.Println(" 2 Read Size: ", length)
-				out := buff[:length]
 				object = append([]byte(fmt.Sprintf("blob %d\x00", len(out))), out...)
 			} else {
 				object, err = f.api.BlockGet(c)

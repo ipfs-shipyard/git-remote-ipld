@@ -17,6 +17,8 @@ type RemoteHandler interface {
 	List(remote *Remote, forPush bool) ([]string, error)
 	Push(remote *Remote, localRef string, remoteRef string) (string, error)
 
+	GetRemoteName() string
+
 	Initialize(remote *Remote) error
 	Finish(remote *Remote) error
 
@@ -119,7 +121,7 @@ func (r *Remote) push(src, dst string, force bool) {
 func (r *Remote) fetch(sha, ref string) {
 	r.todo = append(r.todo, func() (string, error) {
 		fetch := r.NewFetch()
-		err := fetch.FetchHash(sha)
+		err := fetch.FetchHash(sha, r)
 		if err != nil {
 			return "", fmt.Errorf("command fetch: %v", err)
 		}
