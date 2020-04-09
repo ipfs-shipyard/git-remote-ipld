@@ -67,8 +67,6 @@ func (t *Tracker) Entry(hash string) (string, error) {
 		t.txn = t.db.NewTransaction(true)
 	}
 
-	t.log.Println("Checking Cache: ", hash)
-
 	ret, err := t.txn.Get([]byte(hash))
 	if err == badger.ErrKeyNotFound {
 		return "", nil
@@ -83,7 +81,6 @@ func (t *Tracker) Entry(hash string) (string, error) {
 	}
 
 	c := string(cBytes)
-	t.log.Printf("Cache Got: \"%s\"\n", c)
 
 	return c, nil
 }

@@ -142,17 +142,11 @@ func (h *IpnsHandler) Push(remote *core.Remote, local string, remoteRef string) 
 	headHash := localRef.Hash().String()
 
 	push := remote.NewPush()
-	remote.Logger.Println("IpnsHandler.Push#PushHash: ", headHash)
+	remote.Logger.Println("IpnsHandler.Push#PushHash:", headHash)
 	h.currentHash, err = push.PushHash(headHash, remote)
-	remote.Logger.Println("IpnsHandler.Push#shunt == ", h.currentHash)
+	remote.Logger.Println("IpnsHandler.Push#shunt ==", h.currentHash)
 	if err != nil {
 		return "", fmt.Errorf("command push: %v", err)
-	}
-
-	keyedShunts, _ := h.api.List(h.currentHash + "/blobs")
-	shunts := make(map[string]string)
-	for _, s := range keyedShunts {
-		shunts[s.Name] = s.Hash
 	}
 
 	head, err := remote.Repo.Head()
@@ -160,31 +154,16 @@ func (h *IpnsHandler) Push(remote *core.Remote, local string, remoteRef string) 
 	tree, err := commit.Tree()
 	files := tree.Files()
 	for leaf, _ := files.Next(); leaf != nil; leaf, _ = files.Next() {
-		refId, ok := shunts[leaf.Hash.String()]
-		if refId == "" {
-			refId, err = remote.Tracker.Entry(leaf.Hash.String())
-			ok = err == nil
-		}
-		remote.Logger.Printf("Remote.repo %s => %s (%s)\n", leaf.Name, leaf.Hash, refId)
-		if ok {
+		refId, err := remote.Tracker.Entry(leaf.Hash.String())
+		remote.Logger.Printf("IpnsHandler#Remote.repo %s => %s (%s)\n", leaf.Name, leaf.Hash, refId)
+		if err == nil {
 			h.currentHash, err = h.api.PatchLink(h.currentHash, "content/" + leaf.Name, refId, true)
 		} else {
 			remote.Logger.Println("Couldn't Find Blob: ", leaf.Hash)
 		}
 	}
 
-	hash := localRef.Hash()
-
-	remote.Logger.Println("IpnsHandler.Push#localRef.Hash() == ", hash)
-	
-	remote.Tracker.AddEntry(hash.String(), shunts[hash.String()])
-
-	c, err := core.CidFromHex(headHash)
-	if err != nil {
-		return "", fmt.Errorf("push: %v", err)
-	}
-
-	remote.Logger.Println("IpnsHandler.Push#cid == ", c)
+	remote.Logger.Println("IpnsHandler.Push#currentHash ==", h.currentHash)
 
 	hashHolder, err := h.api.Add(strings.NewReader(headHash)) //TODO: Make this smarter?
 	if err != nil {
@@ -192,14 +171,6 @@ func (h *IpnsHandler) Push(remote *core.Remote, local string, remoteRef string) 
 	}
 
 	h.currentHash, err = h.api.PatchLink(h.currentHash, remoteRef, hashHolder, true)
-	if err != nil {
-		return "", fmt.Errorf("push: %v", err)
-	}
-
-	//patch object
-	//remote.Logger.Printf("ipfs/object/patch/add-link %s %s %s %b\n", h.currentHash, remoteRef, c, true)
-
-	//h.currentHash, err = h.api.PatchLink(h.currentHash, remoteRef, c.String(), true)
 	if err != nil {
 		return "", fmt.Errorf("push: %v", err)
 	}

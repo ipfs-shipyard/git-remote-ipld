@@ -69,6 +69,8 @@ func (p *Push) PushHash(hash string, remote *Remote) (string, error) {
 func (p *Push) doWork(remote *Remote) (string, error) {
 	defer p.wg.Wait()
 
+	p.log.Println("Push#doWork.shuntHash ==", p.shuntHash)
+
 	api := ipfs.NewLocalShell()
 
 	intch := make(chan os.Signal, 1)
@@ -107,17 +109,6 @@ func (p *Push) doWork(remote *Remote) (string, error) {
 			return "", fmt.Errorf("push/process: %v", err)
 		}
 
-		if entry != "" {
-			p.log.Printf("Cache Hit: %s (%s)\n", hash, entry)
-			//p.todoc--
-			//continue
-		}
-
-		expectedCid, err := CidFromHex(hash)
-		if err != nil {
-			return "", fmt.Errorf("push: %v", err)
-		}
-
 		obj, err := p.repo.Storer.EncodedObject(plumbing.AnyObject, plumbing.NewHash(hash))
 		if err != nil {
 			return "", fmt.Errorf("push/getObject(%s): %v", hash, err)
@@ -136,58 +127,67 @@ func (p *Push) doWork(remote *Remote) (string, error) {
 			objType = "tag"
 		}
 
-		rawReader, err := obj.Reader()
+		if entry == "" {
+			rawReader, err := obj.Reader()
+			if err != nil {
+				return "", fmt.Errorf("push: %v", err)
+			}
+
+			entry, err = api.Add(rawReader)
+			if err != nil {
+				return "", fmt.Errorf("push: %v", err)
+			}
+		}
+
+		p.log.Printf("Patching in %s:%s (%s) to %s\n", objType, hash, entry, p.shuntHash)
+		p.shunts[hash] = entry
+		p.shuntHash, err = api.PatchLink(p.shuntHash, objType + "s/" + hash, entry, true)
 		if err != nil {
 			return "", fmt.Errorf("push: %v", err)
 		}
-
-		contentid, err := api.Add(rawReader)
-		if err != nil {
-			return "", fmt.Errorf("push: %v", err)
-		}
-
-		p.shunts[hash] = contentid
-		p.shuntHash, _ = api.PatchLink(p.shuntHash, objType + "s/" + hash, contentid, true)
+	
 		p.log.Printf("Adding ID: %s/%s (%s)\n", objType, hash, p.shuntHash)
 
 		p.done++
 		if p.done%1 == 0 || p.done == p.todoc {
 			//p.log.Printf("%d/%d (P:%d) %s %s\r\x1b[A", p.done, p.todoc, len(p.processing), hash, expectedCid.String())
-			p.log.Printf("%d/%d (P:%d) %s %s\n", p.done, p.todoc, len(p.processing), hash, expectedCid.String())
+			p.log.Printf("%d/%d (P:%d) %s %s\n", p.done, p.todoc, len(p.processing), hash, entry)
 		}
 
-		rawReader, err = obj.Reader()
-		if err != nil {
-			return "", fmt.Errorf("push: %v", err)
-		}
+		if objType != "blob" {
+			rawReader, err := obj.Reader()
+			if err != nil {
+				return "", fmt.Errorf("push: %v", err)
+			}
 
-		raw, err := ioutil.ReadAll(rawReader)
-		if err != nil {
-			return "", fmt.Errorf("push: %v", err)
-		}
+			raw, err := ioutil.ReadAll(rawReader)
+			if err != nil {
+				return "", fmt.Errorf("push: %v", err)
+			}
 
-		raw = append([]byte(fmt.Sprintf("%s %d\x00", objType, obj.Size())), raw...)
+			raw = append([]byte(fmt.Sprintf("%s %d\x00", objType, obj.Size())), raw...)
 
-		p.log.Printf("Push#doWork.processLinks(): %s\n", hash)
-		n, err := p.processLinks(raw, sha)
-		if err != nil {
-			return "", fmt.Errorf("push/processLinks: %v", err)
-		}
+			p.log.Printf("Push#doWork.processLinks(): %s\n", hash)
+			n, err := p.processLinks(raw, sha)
+			if err != nil {
+				return "", fmt.Errorf("push/processLinks: %v", err)
+			}
 
-		if n == 0 {
-			p.todoc++
-			p.todo.PushBack(p.doneFunc(hash, p.shunts[hash]))
-		} else {
-			p.processing[string(sha)] = n
+			if n == 0 {
+				p.todoc++
+				p.todo.PushBack(p.doneFunc(hash, p.shunts[hash]))
+			} else {
+				p.processing[string(sha)] = n
+			}
 		}
-
-		select {
-		case e := <-p.errCh:
-			return "", e
-		default:
-		}
+		// select {
+		// case e := <-p.errCh:
+		// 	return "", e
+		// default:
+		//}
 	}
-	p.log.Printf("\n")
+	//p.log.Printf("\n")
+	p.log.Println("Returning:", p.shuntHash)
 	return p.shuntHash, nil
 }
 
