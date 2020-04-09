@@ -122,12 +122,7 @@ func (r *Remote) fetch(hash string, ref string) {
 			return "", fmt.Errorf("command fetch: %v", err)
 		}
 
-		// sha, err := hex.DecodeString(sha)
-		// if err != nil {
-			// return "", fmt.Errorf("fetch: %v", err)
-		// }
-
-		r.Tracker.AddEntry(hash, fetch.shunts[hash])
+		r.Tracker.AddEntry(hash, fetch.shunts[hash].cid)
 		return "", nil
 	})
 }

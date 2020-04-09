@@ -22,6 +22,11 @@ var ErrNotProvided = errors.New("block not provided")
 
 type ObjectProvider func(cid string, tracker *Tracker) ([]byte, error)
 
+type Object struct{
+	objType string
+	cid string
+}
+
 type Fetch struct {
 	objectDir string
 	gitDir    string
@@ -37,7 +42,7 @@ type Fetch struct {
 	wg     sizedwaitgroup.SizedWaitGroup
 	doneCh chan []byte
 
-	shunts map[string]string
+	shunts map[string]Object
 	fsLk *sync.Mutex
 
 	provider ObjectProvider
@@ -69,12 +74,29 @@ func (f *Fetch) FetchHash(base string, remote *Remote) error {
 	go func() {
 		f.todo <- base
 	}()
-	shunts, _ := f.api.List(remote.Handler.GetRemoteName() + "/blobs")
-	f.shunts = make(map[string]string)
-	for _, s := range shunts {
-		f.shunts[s.Name] = s.Hash
+	f.shunts = make(map[string]Object)
+	shunts, err := f.api.List(remote.Handler.GetRemoteName() + "/blobs")
+	if err != nil {
+		return err
 	}
-	f.log.Printf("Shunt! %s\n", remote.Handler.GetRemoteName() + "/blobs")
+	for _, s := range shunts {
+		f.log.Println("Adding Blob Hash:", s.Name)
+		f.shunts[s.Name] = Object{ "blob", s.Hash }
+	}
+	shunts, _ = f.api.List(remote.Handler.GetRemoteName() + "/commits")
+	for _, s := range shunts {
+		f.log.Println("Adding Commit Hash:", s.Name)
+		f.shunts[s.Name] = Object{ "commit", s.Hash }
+	}
+	shunts, _ = f.api.List(remote.Handler.GetRemoteName() + "/tags")
+	for _, s := range shunts {
+		f.shunts[s.Name] = Object{ "tag", s.Hash }
+	}
+	shunts, _ = f.api.List(remote.Handler.GetRemoteName() + "/trees")
+	for _, s := range shunts {
+		f.shunts[s.Name] = Object{ "tree", s.Hash }
+	}
+	f.log.Printf("Shunt! %s (%d)\n", remote.Handler.GetRemoteName(), len(f.shunts))
 	return f.doWork()
 }
 
@@ -126,12 +148,12 @@ func (f *Fetch) processSingle(hash string) error {
 	}
 	if entry != "" {
 		f.log.Println("Fetch Cache Found: ", hash)
-		f.todoc--
-		return nil
+		//f.todoc--
+		//return nil
 	}
 
 	// Need to do this early
-	if err := f.tracker.AddEntry(hash, f.shunts[hash]); err != nil {
+	if err := f.tracker.AddEntry(hash, f.shunts[hash].cid); err != nil {
 		return fmt.Errorf("fetch: %v", err)
 	}
 
@@ -151,29 +173,25 @@ func (f *Fetch) processSingle(hash string) error {
 
 		object := []byte(nil)
 
-		shunt, ok := f.shunts[c]
-		f.log.Printf("Fetch#BlockGet == %s (%s)\n", c, shunt)
-		if ok {
+		shunt, ok := f.shunts[hash]
+		f.log.Printf("Fetch#BlockGet == %s (%s)\n", hash, shunt.cid)
+		if !ok {
+			f.log.Println("!!!Fetch#BlockGet Hash Not Found: ", c)
+		} else {
 			f.log.Println("Fetch#BlockGet// shunted == ", c)
-			r, _ := f.api.Cat(shunt)
+			r, _ := f.api.Cat(shunt.cid)
 			defer r.Close()
 			buff := new(bytes.Buffer)
 			buff.ReadFrom(r)
 			out := buff.String()
-			object = append([]byte(fmt.Sprintf("blob %d\x00", len(out))), out...)
-		} else {
-			object, err = f.api.BlockGet(c)
-			if err != nil {
-				f.errCh <- fmt.Errorf("fetch: %v", err)
-				return
-			}
+			object = append([]byte(fmt.Sprintf("%s %d\x00", shunt.objType, len(out))), out...)
 		}
 
 		if object == nil {
 			f.log.Println("Empty Block! ", c)
 		}
 
-		f.log.Println("Fetch#processLinks")
+		f.log.Println("Fetch#processLinks:")
 
 		f.processLinks(object)
 

@@ -123,7 +123,40 @@ func (p *Push) doWork(remote *Remote) (string, error) {
 			return "", fmt.Errorf("push/getObject(%s): %v", hash, err)
 		}
 
+		objType := "unknown"
+
+		switch obj.Type() {
+		case plumbing.CommitObject:
+			objType = "commit"
+		case plumbing.TreeObject:
+			objType = "tree"
+		case plumbing.BlobObject:
+			objType = "blob"
+		case plumbing.TagObject:
+			objType = "tag"
+		}
+
 		rawReader, err := obj.Reader()
+		if err != nil {
+			return "", fmt.Errorf("push: %v", err)
+		}
+
+		contentid, err := api.Add(rawReader)
+		if err != nil {
+			return "", fmt.Errorf("push: %v", err)
+		}
+
+		p.shunts[hash] = contentid
+		p.shuntHash, _ = api.PatchLink(p.shuntHash, objType + "s/" + hash, contentid, true)
+		p.log.Printf("Adding ID: %s/%s (%s)\n", objType, hash, p.shuntHash)
+
+		p.done++
+		if p.done%1 == 0 || p.done == p.todoc {
+			//p.log.Printf("%d/%d (P:%d) %s %s\r\x1b[A", p.done, p.todoc, len(p.processing), hash, expectedCid.String())
+			p.log.Printf("%d/%d (P:%d) %s %s\n", p.done, p.todoc, len(p.processing), hash, expectedCid.String())
+		}
+
+		rawReader, err = obj.Reader()
 		if err != nil {
 			return "", fmt.Errorf("push: %v", err)
 		}
@@ -133,57 +166,7 @@ func (p *Push) doWork(remote *Remote) (string, error) {
 			return "", fmt.Errorf("push: %v", err)
 		}
 
-		isBlob := false
-
-		switch obj.Type() {
-		case plumbing.CommitObject:
-			raw = append([]byte(fmt.Sprintf("commit %d\x00", obj.Size())), raw...)
-		case plumbing.TreeObject:
-			raw = append([]byte(fmt.Sprintf("tree %d\x00", obj.Size())), raw...)
-		case plumbing.BlobObject:
-			rawReader, err := obj.Reader()
-			if err != nil {
-				return "", fmt.Errorf("push: %v", err)
-			}
-			contentid, _ := api.Add(rawReader)
-			p.shunts[hash] = contentid
-			p.shuntHash, _ = api.PatchLink(p.shuntHash, hash, contentid, true)
-			p.log.Printf("Adding ID: %s (%s)\n", hash, p.shuntHash)
-			raw = append([]byte(fmt.Sprintf("blob %d\x00", obj.Size())), raw...)
-			isBlob = true
-		case plumbing.TagObject:
-			raw = append([]byte(fmt.Sprintf("tag %d\x00", obj.Size())), raw...)
-		}
-
-		p.done++
-		if p.done%1 == 0 || p.done == p.todoc {
-			//p.log.Printf("%d/%d (P:%d) %s %s\r\x1b[A", p.done, p.todoc, len(p.processing), hash, expectedCid.String())
-			p.log.Printf("%d/%d (P:%d) %s %s\n", p.done, p.todoc, len(p.processing), hash, expectedCid.String())
-		}
-
-		p.wg.Add()
-		go func() {
-			defer p.wg.Done()
-
-			if !isBlob {
-				res, err := api.BlockPut(raw, "git-raw", "sha1", -1)
-				if err != nil {
-					p.errCh <- fmt.Errorf("push/put: %v", err)
-					return
-				}
-
-				if expectedCid.String() != res {
-					p.errCh <- fmt.Errorf("CIDs don't match: expected %s, got %s", expectedCid, res)
-					return
-				}
-
-				if err := remote.Tracker.AddEntry(hash, res); err != nil {
-					p.errCh <- fmt.Errorf("push/put: %v", err)
-				}
-			}
-
-			p.log.Printf("Finished Block Put: %s\n", hash)
-		}()
+		raw = append([]byte(fmt.Sprintf("%s %d\x00", objType, obj.Size())), raw...)
 
 		p.log.Printf("Push#doWork.processLinks(): %s\n", hash)
 		n, err := p.processLinks(raw, sha)
@@ -228,7 +211,7 @@ func (p *Push) doneFunc(hash string, c string) func() error {
 	}
 }
 
-func (p *Push) processLinks(object []byte, selfSha []byte) (int, error) {
+func (p *Push) processLinks(object []byte, sha []byte) (int, error) {
 	nd, err := ipldgit.ParseObjectFromBuffer(object)
 	if err != nil {
 		return 0, fmt.Errorf("push/process: %v", err)
@@ -258,10 +241,10 @@ func (p *Push) processLinks(object []byte, selfSha []byte) (int, error) {
 			}
 		}
 
-		p.log.Println("Push#processLinks.selfSha == ", hex.EncodeToString(selfSha))
+		p.log.Println("Push#processLinks.sha == ", hex.EncodeToString(sha))
 
 		//p.subs[string(decoded.Digest)] = append(p.subs[string(decoded.Digest)], selfSha)
-		p.subs[hash] = append(p.subs[hash], hex.EncodeToString(selfSha))
+		p.subs[hash] = append(p.subs[hash], hex.EncodeToString(sha))
 
 		n++
 		p.todoc++

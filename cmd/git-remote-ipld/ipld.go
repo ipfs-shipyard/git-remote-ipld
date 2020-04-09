@@ -69,28 +69,18 @@ func (h *IpnsHandler) List(remote *core.Remote, forPush bool) ([]string, error) 
 	h.log.Println("IpnsHandler.List: forPush ==", forPush)
 	out := make([]string, 0)
 	if !forPush {
-		h.log.Println("Starting Paths with: ", h.remoteName)
+		h.log.Println("Starting Paths with:", h.remoteName)
 		refs, err := h.paths(h.api, h.remoteName, 0)
 		if err != nil {
 			return nil, err
 		}
 
 		for _, ref := range refs {
-			h.log.Println("IPNSHandler#List.ref.path == ", ref.path)
+			h.log.Println("IPNSHandler#List.ref.path ==", ref.path)
 			switch ref.rType {
 			case REFPATH_HEAD:
 				r := path.Join(strings.Split(ref.path, "/")[1:]...)
-				c, err := cid.Parse(ref.hash)
-				if err != nil {
-					return nil, err
-				}
-
-				hash, err := core.HexFromCid(c)
-				if err != nil {
-					return nil, err
-				}
-
-				out = append(out, fmt.Sprintf("%s %s", hash, r))
+				out = append(out, fmt.Sprintf("%s %s", ref.hash, r))
 			case REFPATH_REF:
 				r := path.Join(strings.Split(ref.path, "/")[1:]...)
 				dest, err := h.getRef(r)
@@ -99,7 +89,6 @@ func (h *IpnsHandler) List(remote *core.Remote, forPush bool) ([]string, error) 
 				}
 				out = append(out, fmt.Sprintf("@%s %s", dest, r))
 			}
-
 		}
 	} else {
 		it, err := remote.Repo.Branches()
@@ -109,6 +98,8 @@ func (h *IpnsHandler) List(remote *core.Remote, forPush bool) ([]string, error) 
 
 		err = it.ForEach(func(ref *plumbing.Reference) error {
 			remoteRef := "0000000000000000000000000000000000000000"
+
+			h.log.Println("Looking Up:", path.Join(h.currentHash, ref.Name().String()))
 
 			localRef, err := h.api.ResolvePath(path.Join(h.currentHash, ref.Name().String()))
 			if err != nil && !isNoLink(err) {
@@ -152,13 +143,13 @@ func (h *IpnsHandler) Push(remote *core.Remote, local string, remoteRef string) 
 
 	push := remote.NewPush()
 	remote.Logger.Println("IpnsHandler.Push#PushHash: ", headHash)
-	shunt, err := push.PushHash(headHash, remote)
-	remote.Logger.Println("IpnsHandler.Push#shunt == ", shunt)
+	h.currentHash, err = push.PushHash(headHash, remote)
+	remote.Logger.Println("IpnsHandler.Push#shunt == ", h.currentHash)
 	if err != nil {
 		return "", fmt.Errorf("command push: %v", err)
 	}
 
-	keyedShunts, _ := h.api.List(shunt)
+	keyedShunts, _ := h.api.List(h.currentHash + "/blobs")
 	shunts := make(map[string]string)
 	for _, s := range keyedShunts {
 		shunts[s.Name] = s.Hash
@@ -182,11 +173,6 @@ func (h *IpnsHandler) Push(remote *core.Remote, local string, remoteRef string) 
 		}
 	}
 
-	h.currentHash, err = h.api.PatchLink(h.currentHash, "blobs", shunt, true)
-	if err != nil {
-		return "", fmt.Errorf("push: %v", err)
-	}
-
 	hash := localRef.Hash()
 
 	remote.Logger.Println("IpnsHandler.Push#localRef.Hash() == ", hash)
@@ -200,10 +186,20 @@ func (h *IpnsHandler) Push(remote *core.Remote, local string, remoteRef string) 
 
 	remote.Logger.Println("IpnsHandler.Push#cid == ", c)
 
-	//patch object
-	remote.Logger.Printf("ipfs/object/patch/add-link %s %s %s %b\n", h.currentHash, remoteRef, c, true)
+	hashHolder, err := h.api.Add(strings.NewReader(headHash)) //TODO: Make this smarter?
+	if err != nil {
+		return "", fmt.Errorf("push: %v", err)
+	}
 
-	h.currentHash, err = h.api.PatchLink(h.currentHash, remoteRef, c.String(), true)
+	h.currentHash, err = h.api.PatchLink(h.currentHash, remoteRef, hashHolder, true)
+	if err != nil {
+		return "", fmt.Errorf("push: %v", err)
+	}
+
+	//patch object
+	//remote.Logger.Printf("ipfs/object/patch/add-link %s %s %s %b\n", h.currentHash, remoteRef, c, true)
+
+	//h.currentHash, err = h.api.PatchLink(h.currentHash, remoteRef, c.String(), true)
 	if err != nil {
 		return "", fmt.Errorf("push: %v", err)
 	}
@@ -258,7 +254,7 @@ func (h *IpnsHandler) paths(api *ipfs.Shell, p string, level int) ([]refPath, er
 	if err != nil {
 		return nil, err
 	}
-	h.log.Println("IPNSHandler.paths.links: ", links)
+	h.log.Println("IPNSHandler.paths.links:", len(links))
 
 	out := make([]refPath, 0)
 	for _, link := range links {
@@ -268,7 +264,7 @@ func (h *IpnsHandler) paths(api *ipfs.Shell, p string, level int) ([]refPath, er
 				continue
 			}
 
-			h.log.Println("Recursing?: ", link.Name)
+			h.log.Println("Recursing?:", link.Name)
 			if link.Name == "heads" || link.Name == "refs" {
 				sub, err := h.paths(api, path.Join(p, link.Name), level + 1)
 				if err != nil {
@@ -277,8 +273,18 @@ func (h *IpnsHandler) paths(api *ipfs.Shell, p string, level int) ([]refPath, er
 				out = append(out, sub...)
 			}
 		case ipfs.TFile:
-			out = append(out, refPath{path.Join(p, link.Name), REFPATH_REF, link.Hash})
+			h.log.Printf("Found File: %s\n", path.Join(p, link.Name))
+			if link.Name == "HEAD" {
+				out = append(out, refPath{path.Join(p, link.Name), REFPATH_REF, link.Hash})
+			} else {
+				hashVal, err := h.getCid(link.Hash)
+				if err != nil {
+					return nil, err
+				}
+				out = append(out, refPath{path.Join(p, link.Name), REFPATH_HEAD, hashVal})
+			}
 		case -1, 0: //unknown, assume git node
+			h.log.Printf("Found Unknown: %s (%s)\n", path.Join(p, link.Name), link.Hash)
 			out = append(out, refPath{path.Join(p, link.Name), REFPATH_HEAD, link.Hash})
 		default:
 			return nil, fmt.Errorf("unexpected link type %d", link.Type)
