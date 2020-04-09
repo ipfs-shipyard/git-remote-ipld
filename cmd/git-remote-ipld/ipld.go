@@ -141,7 +141,7 @@ func (h *IpnsHandler) List(remote *core.Remote, forPush bool) ([]string, error) 
 func (h *IpnsHandler) Push(remote *core.Remote, local string, remoteRef string) (string, error) {
 	h.didPush = true
 
-	remote.Logger.Println("IpnsHandler.Push.local == ", local)
+	remote.Logger.Println("IpnsHandler#Push.local == ", local)
 
 	localRef, err := remote.Repo.Reference(plumbing.ReferenceName(local), true)
 	if err != nil {
@@ -149,8 +149,6 @@ func (h *IpnsHandler) Push(remote *core.Remote, local string, remoteRef string) 
 	}
 
 	headHash := localRef.Hash().String()
-
-	remote.Logger.Println("IpnsHandler.Push#local == ", local)
 
 	push := remote.NewPush()
 	remote.Logger.Println("IpnsHandler.Push#PushHash: ", headHash)
@@ -172,6 +170,10 @@ func (h *IpnsHandler) Push(remote *core.Remote, local string, remoteRef string) 
 	files := tree.Files()
 	for leaf, _ := files.Next(); leaf != nil; leaf, _ = files.Next() {
 		refId, ok := shunts[leaf.Hash.String()]
+		if refId == "" {
+			refId, err = remote.Tracker.Entry(leaf.Hash.String())
+			ok = err == nil
+		}
 		remote.Logger.Printf("Remote.repo %s => %s (%s)\n", leaf.Name, leaf.Hash, refId)
 		if ok {
 			h.currentHash, err = h.api.PatchLink(h.currentHash, "content/" + leaf.Name, refId, true)

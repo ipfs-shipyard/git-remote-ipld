@@ -45,7 +45,7 @@ func NewPush(gitDir string, tracker *Tracker, repo *git.Repository) *Push {
 		gitDir:    gitDir,
 
 		todo:    list.New(),
-		log:     log.New(os.Stderr, "push: ", 0),
+		log:     log.New(os.Stderr, "\x1b[33mpush:\x1b[39m ", 0),
 		tracker: tracker,
 		repo:    repo,
 		todoc:   1,
@@ -97,6 +97,7 @@ func (p *Push) doWork(remote *Remote) (string, error) {
 
 		_, processing := p.processing[hash]
 		if processing {
+			p.log.Println("Currently Processing: ", hash)
 			p.todoc--
 			continue
 		}
@@ -107,9 +108,9 @@ func (p *Push) doWork(remote *Remote) (string, error) {
 		}
 
 		if entry != "" {
-			p.log.Println("Cache Hit: ", entry)
-			p.todoc--
-			continue
+			p.log.Printf("Cache Hit: %s (%s)\n", hash, entry)
+			//p.todoc--
+			//continue
 		}
 
 		expectedCid, err := CidFromHex(hash)
@@ -252,11 +253,12 @@ func (p *Push) processLinks(object []byte, selfSha []byte) (int, error) {
 			}
 
 			if entry != "" {
-				continue
+				p.log.Println("Push#Links Cache Hit: ", hex.EncodeToString(decoded.Digest))
+				//continue
 			}
 		}
 
-		p.log.Println("Push#processLinks.hash == ", hash)
+		p.log.Println("Push#processLinks.selfSha == ", hex.EncodeToString(selfSha))
 
 		//p.subs[string(decoded.Digest)] = append(p.subs[string(decoded.Digest)], selfSha)
 		p.subs[hash] = append(p.subs[hash], hex.EncodeToString(selfSha))

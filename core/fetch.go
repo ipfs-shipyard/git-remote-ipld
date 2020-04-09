@@ -49,7 +49,7 @@ func NewFetch(gitDir string, tracker *Tracker) *Fetch {
 		objectDir: path.Join(gitDir, "objects"),
 		gitDir:    gitDir,
 
-		log:     log.New(os.Stderr, "fetch: ", 0),
+		log:     log.New(os.Stderr, "\x1b[34mfetch:\x1b[39m ", 0),
 		tracker: tracker,
 
 		fsLk: &sync.Mutex{},
@@ -149,30 +149,28 @@ func (f *Fetch) processSingle(hash string) error {
 
 		f.log.Println("Fetch#prepHashPath == ", hash)
 
-		object, err := f.provider(c, f.tracker)
-		if err != nil {
-			if err != ErrNotProvided {
-				f.errCh <- err
+		object := []byte(nil)
+
+		shunt, ok := f.shunts[c]
+		f.log.Printf("Fetch#BlockGet == %s (%s)\n", c, shunt)
+		if ok {
+			f.log.Println("Fetch#BlockGet// shunted == ", c)
+			r, _ := f.api.Cat(shunt)
+			defer r.Close()
+			buff := new(bytes.Buffer)
+			buff.ReadFrom(r)
+			out := buff.String()
+			object = append([]byte(fmt.Sprintf("blob %d\x00", len(out))), out...)
+		} else {
+			object, err = f.api.BlockGet(c)
+			if err != nil {
+				f.errCh <- fmt.Errorf("fetch: %v", err)
 				return
 			}
+		}
 
-			shunt, ok := f.shunts[c]
-			f.log.Printf("Fetch#BlockGet == %s (%s)\n", c, shunt)
-			if ok {
-				f.log.Println("Fetch#BlockGet// shunted == ", c)
-				r, _ := f.api.Cat(shunt)
-				defer r.Close()
-				buff := new(bytes.Buffer)
-				buff.ReadFrom(r)
-				out := buff.String()
-				object = append([]byte(fmt.Sprintf("blob %d\x00", len(out))), out...)
-			} else {
-				object, err = f.api.BlockGet(c)
-				if err != nil {
-					f.errCh <- fmt.Errorf("fetch: %v", err)
-					return
-				}
-			}
+		if object == nil {
+			f.log.Println("Empty Block! ", c)
 		}
 
 		f.log.Println("Fetch#processLinks")
@@ -183,15 +181,20 @@ func (f *Fetch) processSingle(hash string) error {
 
 		object = compressObject(object)
 
-		f.log.Println("Fetch#writing: ", *objectPath)
+		_, err = os.Stat(*objectPath)
+		if !os.IsNotExist(err) {
+			f.log.Println("Skipping Existing: ", *objectPath)
+		} else {
+			f.log.Println("Fetch#writing: ", *objectPath)
 
-		err = ioutil.WriteFile(*objectPath, object, 0444)
-		if err != nil {
-			f.errCh <- fmt.Errorf("fetch: %v", err)
-			return
+			err = ioutil.WriteFile(*objectPath, object, 0444)
+			if err != nil {
+				f.errCh <- fmt.Errorf("fetch: %v", err)
+				return
+			}
+		
+			f.log.Println("Fetch#wrote: ", *objectPath)
 		}
-
-		f.log.Println("Fetch#wrote: ", *objectPath)
 
 		//TODO: see if moving this higher would help
 		f.doneCh <- sha
@@ -201,7 +204,7 @@ func (f *Fetch) processSingle(hash string) error {
 }
 
 func (f *Fetch) processLinks(object []byte) error {
-	f.log.Println("len(Fetch#processLinks.object) == ", len(object))
+	f.log.Println("len(Fetch#processLinks.object) ==", len(object))
 	nd, err := ipldgit.ParseObjectFromBuffer(object)
 	if err != nil {
 		return fmt.Errorf("fetch: %v", err)
@@ -212,11 +215,11 @@ func (f *Fetch) processLinks(object []byte) error {
 		mhash := link.Cid.Hash()
 		hash := mhash.HexString()[4:]
 
-		f.log.Println("Fetch#processLinks.hash == ", hash)
+		f.log.Println("Fetch#processLinks.hash ==", hash)
 
 		f.todo <- hash
 	}
-	f.log.Println("End Fetch#processLinks")
+	f.log.Println("End Fetch#processLinks:", len(object))
 	return nil
 }
 

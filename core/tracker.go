@@ -17,7 +17,7 @@ type Tracker struct {
 }
 
 func NewTracker(gitPath string) (*Tracker, error) {
-	log := log.New(os.Stderr, "tracker: ", 0)
+	log := log.New(os.Stderr, "\x1b[31mtracker:\x1b[39m ", 0)
 	ipldDir := path.Join(gitPath, "ipld")
 	log.Printf("Make IPLD Dir: %s\n", ipldDir)
 	err := os.MkdirAll(ipldDir, 0755)
@@ -78,8 +78,12 @@ func (t *Tracker) Entry(hash string) (string, error) {
 	}
 
 	cBytes, err := ret.ValueCopy(nil)
+	if err != nil {
+		return "", err
+	}
+
 	c := string(cBytes)
-	t.log.Println("Cache Got: ", c)
+	t.log.Printf("Cache Got: \"%s\"\n", c)
 
 	return c, nil
 }

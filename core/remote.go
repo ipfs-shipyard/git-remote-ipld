@@ -48,7 +48,6 @@ func NewRemote(handler RemoteHandler, reader io.Reader, writer io.Writer, logger
 	}
 
 	repo, err := git.PlainOpen(localDir)
-	logger.Printf("Remote.repo: %s\n", repo)
 	if err == git.ErrWorktreeNotProvided {
 		repoRoot, _ := path.Split(localDir)
 
