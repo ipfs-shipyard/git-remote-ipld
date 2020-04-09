@@ -66,10 +66,8 @@ func (h *IpnsHandler) GetRemoteName() string {
 }
 
 func (h *IpnsHandler) List(remote *core.Remote, forPush bool) ([]string, error) {
-	h.log.Println("IpnsHandler.List: forPush ==", forPush)
 	out := make([]string, 0)
 	if !forPush {
-		h.log.Println("Starting Paths with:", h.remoteName)
 		refs, err := h.paths(h.api, h.remoteName, 0)
 		if err != nil {
 			return nil, err
@@ -132,8 +130,6 @@ func (h *IpnsHandler) List(remote *core.Remote, forPush bool) ([]string, error) 
 func (h *IpnsHandler) Push(remote *core.Remote, local string, remoteRef string) (string, error) {
 	h.didPush = true
 
-	remote.Logger.Println("IpnsHandler#Push.local == ", local)
-
 	localRef, err := remote.Repo.Reference(plumbing.ReferenceName(local), true)
 	if err != nil {
 		return "", fmt.Errorf("command push: %v", err)
@@ -142,9 +138,7 @@ func (h *IpnsHandler) Push(remote *core.Remote, local string, remoteRef string) 
 	headHash := localRef.Hash().String()
 
 	push := remote.NewPush()
-	remote.Logger.Println("IpnsHandler.Push#PushHash:", headHash)
 	h.currentHash, err = push.PushHash(headHash, remote)
-	remote.Logger.Println("IpnsHandler.Push#shunt ==", h.currentHash)
 	if err != nil {
 		return "", fmt.Errorf("command push: %v", err)
 	}
@@ -156,8 +150,11 @@ func (h *IpnsHandler) Push(remote *core.Remote, local string, remoteRef string) 
 	for leaf, _ := files.Next(); leaf != nil; leaf, _ = files.Next() {
 		refId, err := remote.Tracker.Entry(leaf.Hash.String())
 		remote.Logger.Printf("IpnsHandler#Remote.repo %s => %s (%s)\n", leaf.Name, leaf.Hash, refId)
-		if err == nil {
+		if err == nil && refId != "" {
 			h.currentHash, err = h.api.PatchLink(h.currentHash, "content/" + leaf.Name, refId, true)
+			if err != nil {
+				return "", fmt.Errorf("handler: %v", err)
+			}
 		} else {
 			remote.Logger.Println("Couldn't Find Blob: ", leaf.Hash)
 		}

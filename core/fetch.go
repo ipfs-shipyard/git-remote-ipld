@@ -42,11 +42,11 @@ type Fetch struct {
 	wg     sizedwaitgroup.SizedWaitGroup
 	doneCh chan []byte
 
+	seen   map[string]bool
 	shunts map[string]Object
-	fsLk *sync.Mutex
-
-	provider ObjectProvider
-	api      *ipfs.Shell
+	fsLk   *sync.Mutex
+	snLk   *sync.RWMutex
+	api    *ipfs.Shell
 }
 
 func NewFetch(gitDir string, tracker *Tracker) *Fetch {
@@ -58,6 +58,7 @@ func NewFetch(gitDir string, tracker *Tracker) *Fetch {
 		tracker: tracker,
 
 		fsLk: &sync.Mutex{},
+		snLk: &sync.RWMutex{},
 
 		wg: sizedwaitgroup.New(512),
 
@@ -66,7 +67,9 @@ func NewFetch(gitDir string, tracker *Tracker) *Fetch {
 		errCh:  make(chan error),
 		doneCh: make(chan []byte),
 		
-		api: ipfs.NewLocalShell(),
+		seen:   make(map[string]bool),
+		shunts: make(map[string]Object),
+		api:    ipfs.NewLocalShell(),
 	}
 }
 
@@ -74,30 +77,27 @@ func (f *Fetch) FetchHash(base string, remote *Remote) error {
 	go func() {
 		f.todo <- base
 	}()
-	f.shunts = make(map[string]Object)
-	shunts, err := f.api.List(remote.Handler.GetRemoteName() + "/blobs")
+	
+	f.getGitObjects("blob", remote.Handler.GetRemoteName())
+	f.getGitObjects("commit", remote.Handler.GetRemoteName())
+	f.getGitObjects("tag", remote.Handler.GetRemoteName())
+	f.getGitObjects("tree", remote.Handler.GetRemoteName())
+
+	f.log.Printf("Shunt! %s (%d)\n", remote.Handler.GetRemoteName(), len(f.shunts))
+
+	return f.doWork()
+}
+
+func (f *Fetch) getGitObjects(objType string, remoteName string) error {
+	shunts, err := f.api.List(fmt.Sprintf("%s/%ss", remoteName, objType))
 	if err != nil {
 		return err
 	}
+	f.log.Printf("Adding %d %s(s)\n", len(shunts), objType)
 	for _, s := range shunts {
-		f.log.Println("Adding Blob Hash:", s.Name)
-		f.shunts[s.Name] = Object{ "blob", s.Hash }
+		f.shunts[s.Name] = Object{ objType, s.Hash }
 	}
-	shunts, _ = f.api.List(remote.Handler.GetRemoteName() + "/commits")
-	for _, s := range shunts {
-		f.log.Println("Adding Commit Hash:", s.Name)
-		f.shunts[s.Name] = Object{ "commit", s.Hash }
-	}
-	shunts, _ = f.api.List(remote.Handler.GetRemoteName() + "/tags")
-	for _, s := range shunts {
-		f.shunts[s.Name] = Object{ "tag", s.Hash }
-	}
-	shunts, _ = f.api.List(remote.Handler.GetRemoteName() + "/trees")
-	for _, s := range shunts {
-		f.shunts[s.Name] = Object{ "tree", s.Hash }
-	}
-	f.log.Printf("Shunt! %s (%d)\n", remote.Handler.GetRemoteName(), len(f.shunts))
-	return f.doWork()
+	return nil
 }
 
 func (f *Fetch) doWork() error {
@@ -142,21 +142,6 @@ func (f *Fetch) processSingle(hash string) error {
 		return fmt.Errorf("fetch: %v", err)
 	}
 
-	entry, err := f.tracker.Entry(hash)
-	if err != nil {
-		return err
-	}
-	if entry != "" {
-		f.log.Println("Fetch Cache Found: ", hash)
-		//f.todoc--
-		//return nil
-	}
-
-	// Need to do this early
-	if err := f.tracker.AddEntry(hash, f.shunts[hash].cid); err != nil {
-		return fmt.Errorf("fetch: %v", err)
-	}
-
 	go func() {
 		f.wg.Add()
 		defer f.wg.Done()
@@ -176,26 +161,24 @@ func (f *Fetch) processSingle(hash string) error {
 		shunt, ok := f.shunts[hash]
 		f.log.Printf("Fetch#BlockGet == %s (%s)\n", hash, shunt.cid)
 		if !ok {
-			f.log.Println("!!!Fetch#BlockGet Hash Not Found: ", c)
-		} else {
-			f.log.Println("Fetch#BlockGet// shunted == ", c)
-			r, _ := f.api.Cat(shunt.cid)
-			defer r.Close()
-			buff := new(bytes.Buffer)
-			buff.ReadFrom(r)
-			out := buff.String()
-			object = append([]byte(fmt.Sprintf("%s %d\x00", shunt.objType, len(out))), out...)
+			f.errCh <- fmt.Errorf("fetch !Missing Block!: %v", err)
+			return
 		}
 
+		r, _ := f.api.Cat(shunt.cid)
+		defer r.Close()
+		buff := new(bytes.Buffer)
+		buff.ReadFrom(r)
+		out := buff.String()
+		object = append([]byte(fmt.Sprintf("%s %d\x00", shunt.objType, len(out))), out...)
+		
 		if object == nil {
 			f.log.Println("Empty Block! ", c)
 		}
 
-		f.log.Println("Fetch#processLinks:")
-
-		f.processLinks(object)
-
-		f.log.Println("Fetch#processedLinks")
+		if shunt.objType != "blob" {
+			f.processLinks(object)
+		}
 
 		object = compressObject(object)
 
@@ -234,6 +217,18 @@ func (f *Fetch) processLinks(object []byte) error {
 		hash := mhash.HexString()[4:]
 
 		f.log.Println("Fetch#processLinks.hash ==", hash)
+
+		f.snLk.RLock()
+		_, proc := f.seen[hash]
+		f.snLk.RUnlock()
+		
+		if !!proc {
+			continue
+		}
+
+		f.snLk.Lock()
+		f.seen[hash] = true
+		f.snLk.Unlock()
 
 		f.todo <- hash
 	}

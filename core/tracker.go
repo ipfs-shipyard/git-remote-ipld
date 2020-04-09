@@ -39,7 +39,6 @@ func NewTracker(gitPath string) (*Tracker, error) {
 	}, nil
 }
 
-
 func (t *Tracker) AddEntry(hash string, c string) error {
 	if t.txn == nil {
 		t.txn = t.db.NewTransaction(true)
