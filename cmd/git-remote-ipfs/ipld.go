@@ -126,16 +126,15 @@ func (h *IPFSHandler) Push(remote *core.Remote, local string, remoteRef string) 
 		return "", fmt.Errorf("command push: %v", err)
 	}
 
-	headHash := localRef.Hash().String()
+	root := localRef.Hash()
 
 	push := remote.NewPush()
-	h.currentHash, err = push.PushHash(headHash, remote)
+	h.currentHash, err = push.PushHash(root.String(), remote)
 	if err != nil {
 		return "", fmt.Errorf("command push: %v", err)
 	}
 
-	head, err := remote.Repo.Head()
-	commit, err := remote.Repo.CommitObject(head.Hash())
+	commit, err := remote.Repo.CommitObject(root)
 	tree, err := commit.Tree()
 	files := tree.Files()
 	for leaf, _ := files.Next(); leaf != nil; leaf, _ = files.Next() {
@@ -151,9 +150,7 @@ func (h *IPFSHandler) Push(remote *core.Remote, local string, remoteRef string) 
 		}
 	}
 
-	remote.Logger.Println("IPFSHandler.Push#currentHash ==", h.currentHash)
-
-	hashHolder, err := h.api.Add(strings.NewReader(headHash)) //TODO: Make this smarter?
+	hashHolder, err := h.api.Add(strings.NewReader(root.String()))
 	if err != nil {
 		return "", fmt.Errorf("push: %v", err)
 	}
@@ -163,14 +160,12 @@ func (h *IPFSHandler) Push(remote *core.Remote, local string, remoteRef string) 
 		return "", fmt.Errorf("push: %v", err)
 	}
 
-	remote.Logger.Println("Post Patch currentHash == ", h.currentHash)
-
 	gotHead, err := h.getRef("HEAD")
 	if err != nil {
 		return "", fmt.Errorf("push: %v", err)
 	}
 	if gotHead == "" {
-		headRef, err := h.api.Add(strings.NewReader("refs/heads/master")) //TODO: Make this smarter?
+		headRef, err := h.api.Add(strings.NewReader(remoteRef))
 		if err != nil {
 			return "", fmt.Errorf("push: %v", err)
 		}
