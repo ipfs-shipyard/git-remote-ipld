@@ -9,7 +9,6 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	"path"
 
 	ipfs "github.com/ipfs/go-ipfs-api"
 	ipldgit "github.com/ipfs/go-ipld-git"
@@ -40,7 +39,6 @@ type Push struct {
 
 func NewPush(gitDir string, tracker *Tracker, repo *git.Repository) *Push {
 	return &Push{
-		objectDir: path.Join(gitDir, "objects"),
 		gitDir:    gitDir,
 
 		todo:    list.New(),
@@ -88,11 +86,6 @@ func (p *Push) doWork(remote *Remote) (string, error) {
 
 		hash := e.Value.(string)
 
-		sha, err := hex.DecodeString(hash)
-		if err != nil {
-			return "", fmt.Errorf("push: %v", err)
-		}
-
 		entry, err := p.tracker.Entry(hash)
 		if err != nil {
 			return "", fmt.Errorf("push/process: %v", err)
@@ -135,7 +128,7 @@ func (p *Push) doWork(remote *Remote) (string, error) {
 		if err != nil {
 			return "", fmt.Errorf("push: %v", err)
 		}
-	
+
 		p.done++
 		if p.done%1 == 0 || p.done == p.todoc {
 			p.log.Printf("%d/%d (P:%d) %s/%s (%s)\r\x1b[A", p.done, p.todoc, len(p.seen), objType, hash, entry)
@@ -154,7 +147,7 @@ func (p *Push) doWork(remote *Remote) (string, error) {
 
 			raw = append([]byte(fmt.Sprintf("%s %d\x00", objType, obj.Size())), raw...)
 
-			n, err := p.processLinks(raw, sha)
+			n, err := p.processLinks(raw)
 			if err != nil {
 				return "", fmt.Errorf("push/processLinks: %v", err)
 			}
@@ -179,7 +172,7 @@ func (p *Push) doneFunc(hash string) func() error {
 	}
 }
 
-func (p *Push) processLinks(object []byte, sha []byte) (int, error) {
+func (p *Push) processLinks(object []byte) (int, error) {
 	nd, err := ipldgit.ParseObjectFromBuffer(object)
 	if err != nil {
 		return 0, fmt.Errorf("push/process: %v", err)
@@ -188,16 +181,13 @@ func (p *Push) processLinks(object []byte, sha []byte) (int, error) {
 	var n int
 	links := nd.Links()
 	for _, link := range links {
-		mhash := link.Cid.Hash()
-		decoded, err := mh.Decode(mhash)
+		decoded, err := mh.Decode(link.Cid.Hash())
 		if err != nil {
 			return 0, fmt.Errorf("push/process: %v", err)
 		}
 
 		hash := hex.EncodeToString(decoded.Digest)
-
 		if _, proc := p.seen[hash]; !!proc {
-			//p.log.Println("Push#Links Cache Hit:", hex.EncodeToString(decoded.Digest))
 			continue
 		}
 		p.seen[hash] = true
@@ -208,3 +198,5 @@ func (p *Push) processLinks(object []byte, sha []byte) (int, error) {
 	}
 	return n, nil
 }
+
+

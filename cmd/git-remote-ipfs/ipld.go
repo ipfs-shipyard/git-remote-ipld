@@ -27,7 +27,7 @@ type refPath struct {
 	hash string
 }
 
-type IpnsHandler struct {
+type IPFSHandler struct {
 	api *ipfs.Shell
 
 	remoteName  string
@@ -40,14 +40,14 @@ type IpnsHandler struct {
 	didPush bool
 }
 
-func (h *IpnsHandler) Initialize(remote *core.Remote) error {
+func (h *IPFSHandler) Initialize(remote *core.Remote) error {
 	h.api = ipfs.NewLocalShell()
 	h.currentHash = h.remoteName
 	h.log = log.New(os.Stderr, "\x1b[32mhandler:\x1b[39m ", 0)
 	return nil
 }
 
-func (h *IpnsHandler) Finish(remote *core.Remote) error {
+func (h *IPFSHandler) Finish(remote *core.Remote) error {
 	//TODO: publish
 	if h.didPush {
 		remote.Logger.Printf("Pushed to IPFS as \x1b[32mipld://%s\x1b[39m\n", h.currentHash)
@@ -55,11 +55,11 @@ func (h *IpnsHandler) Finish(remote *core.Remote) error {
 	return nil
 }
 
-func (h *IpnsHandler) GetRemoteName() string {
+func (h *IPFSHandler) GetRemoteName() string {
 	return h.remoteName
 }
 
-func (h *IpnsHandler) List(remote *core.Remote, forPush bool) ([]string, error) {
+func (h *IPFSHandler) List(remote *core.Remote, forPush bool) ([]string, error) {
 	out := make([]string, 0)
 	if !forPush {
 		refs, err := h.paths(h.api, h.remoteName, 0)
@@ -118,7 +118,7 @@ func (h *IpnsHandler) List(remote *core.Remote, forPush bool) ([]string, error) 
 	return out, nil
 }
 
-func (h *IpnsHandler) Push(remote *core.Remote, local string, remoteRef string) (string, error) {
+func (h *IPFSHandler) Push(remote *core.Remote, local string, remoteRef string) (string, error) {
 	h.didPush = true
 
 	localRef, err := remote.Repo.Reference(plumbing.ReferenceName(local), true)
@@ -140,7 +140,7 @@ func (h *IpnsHandler) Push(remote *core.Remote, local string, remoteRef string) 
 	files := tree.Files()
 	for leaf, _ := files.Next(); leaf != nil; leaf, _ = files.Next() {
 		refId, err := remote.Tracker.Entry(leaf.Hash.String())
-		remote.Logger.Printf("IpnsHandler#Remote.repo %s => %s (%s)\n", leaf.Name, leaf.Hash, refId)
+		remote.Logger.Printf("IPFSHandler#Remote.repo %s => %s (%s)\n", leaf.Name, leaf.Hash, refId)
 		if err == nil && refId != "" {
 			h.currentHash, err = h.api.PatchLink(h.currentHash, "content/" + leaf.Name, refId, true)
 			if err != nil {
@@ -151,7 +151,7 @@ func (h *IpnsHandler) Push(remote *core.Remote, local string, remoteRef string) 
 		}
 	}
 
-	remote.Logger.Println("IpnsHandler.Push#currentHash ==", h.currentHash)
+	remote.Logger.Println("IPFSHandler.Push#currentHash ==", h.currentHash)
 
 	hashHolder, err := h.api.Add(strings.NewReader(headHash)) //TODO: Make this smarter?
 	if err != nil {
@@ -184,7 +184,7 @@ func (h *IpnsHandler) Push(remote *core.Remote, local string, remoteRef string) 
 	return local, nil
 }
 
-func (h *IpnsHandler) getCid(cid string) (string, error) {
+func (h *IPFSHandler) getCid(cid string) (string, error) {
 	r, err := h.api.Cat(cid)
 	if err != nil {
 		if isNoLink(err) {
@@ -203,23 +203,23 @@ func (h *IpnsHandler) getCid(cid string) (string, error) {
 	return buf.String(), nil
 }
 
-func (h *IpnsHandler) getRef(name string) (string, error) {
+func (h *IPFSHandler) getRef(name string) (string, error) {
 	return h.getCid(path.Join(h.remoteName, name))
 }
 
-func (h *IpnsHandler) paths(api *ipfs.Shell, p string, level int) ([]refPath, error) {
-	h.log.Println("IPNSHandler.paths: ", p)
+func (h *IPFSHandler) paths(api *ipfs.Shell, p string, level int) ([]refPath, error) {
+	h.log.Println("IPFSHandler.paths: ", p)
 	links, err := api.List(p)
 	if err != nil {
 		return nil, err
 	}
-	h.log.Println("IPNSHandler.paths.links:", len(links))
+	h.log.Println("IPFSHandler.paths.links:", len(links))
 
 	out := make([]refPath, 0)
 	for _, link := range links {
 		switch link.Type {
 		case ipfs.TDirectory:
-			h.log.Println("Recursing?:", link.Name)
+			// read files in /refs/heads/
 			if link.Name == "heads" || link.Name == "refs" {
 				sub, err := h.paths(api, path.Join(p, link.Name), level + 1)
 				if err != nil {
@@ -249,6 +249,6 @@ func (h *IpnsHandler) paths(api *ipfs.Shell, p string, level int) ([]refPath, er
 }
 
 func isNoLink(err error) bool {
-	return strings.Contains(err.Error(), "no link named") || strings.Contains(err.Error(), 
+	return strings.Contains(err.Error(), "no link named") || strings.Contains(err.Error(),
 "no link by that name")
 }

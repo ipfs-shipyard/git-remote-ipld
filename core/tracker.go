@@ -18,14 +18,14 @@ type Tracker struct {
 
 func NewTracker(gitPath string) (*Tracker, error) {
 	log := log.New(os.Stderr, "\x1b[31mtracker:\x1b[39m ", 0)
-	ipldDir := path.Join(gitPath, "ipld")
-	log.Printf("Make IPLD Dir: %s\n", ipldDir)
-	err := os.MkdirAll(ipldDir, 0755)
+	cacheDir := path.Join(gitPath, "remote-ipfs")
+	log.Printf("Make Cache Dir: %s\n", cacheDir)
+	err := os.MkdirAll(cacheDir, 0755)
 	if err != nil {
 		return nil, err
 	}
 
-	opt := badger.DefaultOptions(ipldDir)
+	opt := badger.DefaultOptions(cacheDir)
 	fmt.Printf("Starting Badger\n")
 	db, err := badger.Open(opt)
 	fmt.Printf("Started Badger\n")

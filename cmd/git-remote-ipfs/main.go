@@ -21,7 +21,7 @@ func Main(args []string, reader io.Reader, writer io.Writer, logger *log.Logger)
 	fmt.Printf("Program Starting\n")
 
 	if len(args) < 3 {
-		return fmt.Errorf("Usage: git-remote-ipld remote-name url")
+		return fmt.Errorf("Usage: git-remote-ipfs remote-name url")
 	}
 
 	remoteName := args[2]
@@ -33,8 +33,7 @@ func Main(args []string, reader io.Reader, writer io.Writer, logger *log.Logger)
 		remoteName = EMPTY_REPO
 	}
 
-	remote, err := core.NewRemote(&IpnsHandler{remoteName: remoteName}, reader, writer, logger)
-	fmt.Println("Remote Created")
+	remote, err := core.NewRemote(&IPFSHandler{remoteName: remoteName}, reader, writer, logger)
 	if err != nil {
 		return err
 	}
@@ -55,5 +54,4 @@ func main() {
 		fmt.Fprintf(os.Stderr, "\x1b[K")
 		log.Fatal(err)
 	}
-	fmt.Fprintf(os.Stderr, "Done\n")
 }
