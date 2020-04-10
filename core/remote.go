@@ -58,7 +58,6 @@ func NewRemote(handler RemoteHandler, reader io.Reader, writer io.Writer, logger
 	}
 
 	tracker, err := NewTracker(localDir)
-	logger.Printf("Remote#Got Tracker\n")
 	if err != nil {
 		return nil, fmt.Errorf("fetch: %v", err)
 	}
@@ -75,8 +74,6 @@ func NewRemote(handler RemoteHandler, reader io.Reader, writer io.Writer, logger
 		Handler: handler,
 	}
 
-	logger.Println("Created Remote: ", localDir)
-
 	if err := handler.Initialize(remote); err != nil {
 		return nil, err
 	}
@@ -90,7 +87,6 @@ func (r *Remote) Printf(format string, a ...interface{}) (n int, err error) {
 }
 
 func (r *Remote) NewPush() *Push {
-	r.Logger.Println("Creating New Push")
 	return NewPush(r.localDir, r.Tracker, r.Repo)
 }
 
@@ -103,7 +99,6 @@ func (r *Remote) Close() error {
 }
 
 func (r *Remote) push(src, dst string, force bool) {
-	r.Logger.Println("Remote#push.src == ", src)
 	r.todo = append(r.todo, func() (string, error) {
 		done, err := r.Handler.Push(r, src, dst)
 		if err != nil {
@@ -128,7 +123,6 @@ func (r *Remote) fetch(hash string, ref string) {
 }
 
 func (r *Remote) ProcessCommands() error {
-	r.Logger.Printf("Processing Commands\n")
 	reader := bufio.NewReader(r.reader)
 loop:
 	for {
@@ -163,7 +157,6 @@ loop:
 		case command == "":
 			fallthrough
 		case command == "\n":
-			r.Logger.Println("Processing tasks")
 			for _, task := range r.todo {
 				resp, err := task()
 				if err != nil {

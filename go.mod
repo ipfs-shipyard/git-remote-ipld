@@ -1,4 +1,4 @@
-module github.com/dhappy/git-remote-ipld
+module github.com/dhappy/git-remote-ipfs
 
 go 1.12
 
@@ -7,6 +7,7 @@ require (
 	github.com/dgraph-io/badger v1.5.4
 	github.com/dgraph-io/badger/v2 v2.0.3
 	github.com/dgryski/go-farm v0.0.0-20190423205320-6a90982ecee2 // indirect
+	github.com/dhappy/git-remote-ipld v0.0.0-20200409125235-e050c9436f72
 	github.com/ipfs-shipyard/git-remote-ipld v0.0.0-20190514134438-501d5f2ce93d
 	github.com/ipfs/go-cid v0.0.2
 	github.com/ipfs/go-ipfs-api v0.0.1

@@ -8,16 +8,11 @@ import (
 	"log"
 	"os"
 
-	core "github.com/dhappy/git-remote-ipld/core"
+	core "github.com/dhappy/git-remote-ipfs/core"
 	ipfs "github.com/ipfs/go-ipfs-api"
 
 	"github.com/ipfs/go-cid"
 	"gopkg.in/src-d/go-git.v4/plumbing"
-)
-
-const (
-	LARGE_OBJECT_DIR    = "objects"
-	LOBJ_TRACKER_PRIFIX = "//lobj"
 )
 
 const (
@@ -49,7 +44,6 @@ func (h *IpnsHandler) Initialize(remote *core.Remote) error {
 	h.api = ipfs.NewLocalShell()
 	h.currentHash = h.remoteName
 	h.log = log.New(os.Stderr, "\x1b[32mhandler:\x1b[39m ", 0)
-	h.log.Println("Starting Object Hash: ", h.currentHash)
 	return nil
 }
 
@@ -74,7 +68,6 @@ func (h *IpnsHandler) List(remote *core.Remote, forPush bool) ([]string, error) 
 		}
 
 		for _, ref := range refs {
-			h.log.Println("IPNSHandler#List.ref.path ==", ref.path)
 			switch ref.rType {
 			case REFPATH_HEAD:
 				r := path.Join(strings.Split(ref.path, "/")[1:]...)
@@ -96,8 +89,6 @@ func (h *IpnsHandler) List(remote *core.Remote, forPush bool) ([]string, error) 
 
 		err = it.ForEach(func(ref *plumbing.Reference) error {
 			remoteRef := "0000000000000000000000000000000000000000"
-
-			h.log.Println("Looking Up:", path.Join(h.currentHash, ref.Name().String()))
 
 			localRef, err := h.api.ResolvePath(path.Join(h.currentHash, ref.Name().String()))
 			if err != nil && !isNoLink(err) {
@@ -228,10 +219,6 @@ func (h *IpnsHandler) paths(api *ipfs.Shell, p string, level int) ([]refPath, er
 	for _, link := range links {
 		switch link.Type {
 		case ipfs.TDirectory:
-			if level == 0 && link.Name == LARGE_OBJECT_DIR {
-				continue
-			}
-
 			h.log.Println("Recursing?:", link.Name)
 			if link.Name == "heads" || link.Name == "refs" {
 				sub, err := h.paths(api, path.Join(p, link.Name), level + 1)
