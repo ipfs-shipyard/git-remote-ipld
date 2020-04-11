@@ -20,7 +20,7 @@ Clone an example repository:
 
 Pull a commit:
 
-`git pull ipfs://QmawUDKvygz3kxVusjLVf3AVGuqcPBAneCjbTTeHjbarfH`
+`git pull ipfs://Qma5iwyvJqxzHqCT9aqyc7dxZXXGoDeSUyPYFqkCWGJw92`
 
 Push without the `/vfs` directory:
 
