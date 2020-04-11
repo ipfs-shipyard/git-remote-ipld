@@ -16,7 +16,7 @@ Push:
 
 Clone an example repository:
 
-`git clone ipfs://QmR6Yt8MgjXKPzKQhxuBAw8yM8qScxHXABh9RAuBEosuvj git-remote-ipfs`
+`git clone ipfs://Qmdi93vJjJdck7AXzx6mPAzpXfK1TMGdaGBLKLARfckzx7 git-remote-ipfs`
 
 Pull a commit:
 
