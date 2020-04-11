@@ -232,6 +232,10 @@ func (h *IPFSHandler) getCid(cid string) (string, error) {
 	return buf.String(), nil
 }
 
+func (h *IPFSHandler) getRef(name string) (string, error) {
+	return h.getCid(path.Join(h.remoteName, name))
+}
+
 func isNoLink(err error) bool {
 	return strings.Contains(err.Error(), "no link named") || strings.Contains(err.Error(),
 "no link by that name")
