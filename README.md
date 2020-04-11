@@ -28,6 +28,17 @@ Push without the `/vfs` directory:
 
 `git push ipfs:// master`
 
+## Generated File Structure
+
+* `content/`: the contents of the branch that was pushed
+* `vfs/commits/`: all the trees linked by commit message and sorted by date
+* `vfs/commits/rev/`: the commits as before, but prefaced with a count to reverse the order
+* `vfs/authors/#{name}/`: commits sorted by author
+* `vfs/authors/#{name}/rev/`: commits sorted by author reversed chronologically
+* `blobs/`, `trees/`, `commits/`, `tags/`: various Git objects stored by their SHA1 hash as filename
+* `refs/heads/*`: files containing the root hash of various Git branches
+* `HEAD`: the name of the branch contained in this repo
+
 ## Overview
 
 Git is at its core an object database. There are four types of objects and they are stored by the SHA1 hash of the serialized form in `.git/objects`.
@@ -51,17 +62,6 @@ There were also technical issues because the contents of a `block put` aren't sh
 This project mitigates that issue by leaving off the header and storing the simple serialized form in a named directory. The filename is the SHA1 key for the file contents.
 
 When fetching, a map is created between the SHA1 keys and their CID along with the type. A traditional headered block can then be generated.
-
-## Generated File Structure
-
-* `content/`: the contents of the branch that was pushed
-* `vfs/commits/`: all the trees linked by commit message and sorted by date
-* `vfs/commits/rev/`: the commits as before, but prefaced with a count to reverse the order
-* `vfs/authors/#{name}/`: commits sorted by author
-* `vfs/authors/#{name}/rev/`: commits sorted by author reversed chronologically
-* `blobs/`, `trees/`, `commits/`, `tags/`: various Git objects stored by their SHA1 hash as filename
-* `refs/heads/*`: files containing the root hash of various Git branches
-* `HEAD`: the name of the branch contained in this repo
 
 # Troubleshooting
 * `fetch: manifest has unsupported version: x (we support y)` on any command
