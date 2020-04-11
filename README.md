@@ -12,6 +12,10 @@ __This software is in an alpha state. The base repository structure is relativel
 
 ## Usage
 
+Push:
+
+`git push ipvfs:// master`
+
 Clone an example repository:
 
 `git clone ipfs://QmR6Yt8MgjXKPzKQhxuBAw8yM8qScxHXABh9RAuBEosuvj git-remote-ipfs`
@@ -19,10 +23,6 @@ Clone an example repository:
 Pull a commit:
 
 `git pull ipfs://QmawUDKvygz3kxVusjLVf3AVGuqcPBAneCjbTTeHjbarfH`
-
-Push:
-
-`git push ipvfs:// master`
 
 Push without the `/vfs` directory:
 
