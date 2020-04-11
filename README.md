@@ -1,8 +1,6 @@
 # Git IPFS Remote Helper
 
-Push and fetch commits to IPFS!
-
-__This software is in an alpha state. The base repository structure is relatively stable and repositories should be backward compatible.__
+Push and fetch commits to IPFS with a published version of the contents.
 
 ## Installation
 1. `git clone https://github.com/dhappy/git-remote-ipfs.git`
@@ -32,9 +30,8 @@ Push without the `/vfs` directory:
 
 * `content/`: the contents of the branch that was pushed
 * `vfs/commits/`: all the trees linked by commit message and sorted by date
-* `vfs/commits/rev/`: the commits as before, but prefaced with a count to reverse the order
 * `vfs/authors/#{name}/`: commits sorted by author
-* `vfs/authors/#{name}/rev/`: commits sorted by author reversed chronologically
+* `vfs/rev/commits/`, `vfs/rev/authors/#{name}/`: the commits as before, but prefaced with a count to reverse the order
 * `blobs/`, `trees/`, `commits/`, `tags/`: various Git objects stored by their SHA1 hash as filename
 * `refs/heads/*`: files containing the root hash of various Git branches
 * `HEAD`: the name of the branch contained in this repo
