@@ -14,7 +14,7 @@ __This software is in an alpha state. The base repository structure is relativel
 
 Push:
 
-`git push ipvfs:// master`
+`git push ipvfs:: master`
 
 Clone an example repository:
 
@@ -26,7 +26,7 @@ Pull a commit:
 
 Push without the `/vfs` directory:
 
-`git push ipfs:// master`
+`git push ipfs:: master`
 
 ## Generated File Structure
 
