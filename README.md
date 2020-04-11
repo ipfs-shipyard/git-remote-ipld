@@ -28,13 +28,13 @@ Push without the `/vfs` directory:
 
 ## Generated File Structure
 
-* `content/`: the contents of the branch that was pushed
-* `vfs/commits/`: all the trees linked by commit message and sorted by date
-* `vfs/authors/#{name}/`: commits sorted by author
-* `vfs/rev/commits/`, `vfs/rev/authors/#{name}/`: the commits as before, but prefaced with a count to reverse the order
-* `blobs/`, `trees/`, `commits/`, `tags/`: various Git objects stored by their SHA1 hash as filename
-* `refs/heads/*`: files containing the root hash of various Git branches
-* `HEAD`: the name of the branch contained in this repo
+* `/`: the contents of the branch that was pushed
+* `.git/vfs/commits/`: all the trees linked by commit message and sorted by date
+* `.git/vfs/authors/#{name}/`: commits sorted by author
+* `.git/vfs/rev/commits/`, `.git/vfs/rev/authors/#{name}/`: the commits as before, but prefaced with a count to reverse the order
+* `.git/blobs/`, `.git/trees/`, `.git/commits/`, `.git/tags/`: various Git objects stored by their SHA1 hash as filename
+* `.git/refs/heads/*`: files containing the root hash of various Git branches
+* `.git/HEAD`: the name of the branch contained in this repo
 
 ## Overview
 

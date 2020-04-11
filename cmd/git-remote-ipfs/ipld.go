@@ -52,7 +52,7 @@ func (h *IPFSHandler) Initialize(remote *core.Remote) error {
 func (h *IPFSHandler) Finish(remote *core.Remote) error {
 	//TODO: publish
 	if h.didPush {
-		remote.Logger.Printf("Pushed to IPFS as \x1b[32mipld://%s\x1b[39m\n", h.currentHash)
+		remote.Logger.Printf("Pushed to IPFS as \x1b[32mipfs://%s\x1b[39m\n", h.currentHash)
 	}
 	return nil
 }
@@ -64,24 +64,20 @@ func (h *IPFSHandler) GetRemoteName() string {
 func (h *IPFSHandler) List(remote *core.Remote, forPush bool) ([]string, error) {
 	out := make([]string, 0)
 	if !forPush {
-		refs, err := h.paths(h.api, h.remoteName, 0)
-		if err != nil {
-			return nil, err
+		_, _, err := h.api.BlockStat(fmt.Sprintf("%s/.git/", h.remoteName))
+		if err == nil {
+			h.log.Printf("Setting GIT DIR: %s → %s\n", h.remoteName, ".git")
+			h.remoteName += "/.git"
 		}
 
-		for _, ref := range refs {
-			switch ref.rType {
-			case REFPATH_HEAD:
-				r := path.Join(strings.Split(ref.path, "/")[1:]...)
-				out = append(out, fmt.Sprintf("%s %s", ref.hash, r))
-			case REFPATH_REF:
-				r := path.Join(strings.Split(ref.path, "/")[1:]...)
-				dest, err := h.getRef(r)
-				if err != nil {
-					return nil, err
-				}
-				out = append(out, fmt.Sprintf("@%s %s", dest, r))
-			}
+		h.log.Printf("Getting HEAD Ref:", h.remoteName)
+		head, err := h.getCid(fmt.Sprintf("%s/HEAD", h.remoteName))
+		out = append(out, fmt.Sprintf("@%s HEAD", head))
+
+		heads, err := h.api.List(fmt.Sprintf("%s/refs/heads/", h.remoteName))
+		for _, head := range heads {
+			hash, _ := h.getCid(head.Hash)
+			out = append(out, fmt.Sprintf("%s refs/heads/%s", hash, head.Name))
 		}
 	} else {
 		it, err := remote.Repo.Branches()
@@ -131,18 +127,18 @@ func (h *IPFSHandler) Push(remote *core.Remote, local string, remoteRef string) 
 	root := localRef.Hash()
 
 	push := remote.NewPush()
-	h.currentHash, err = push.PushHash(root.String(), remote)
+	gitRef, err := push.PushHash(root.String(), remote)
 	if err != nil {
 		return "", fmt.Errorf("command push: %v", err)
 	}
 
+	commit, _ := remote.Repo.CommitObject(root)
+	c, _ := h.cidForCommit(commit, remote)
+
+	h.currentHash, err = h.api.PatchLink(c, ".git", gitRef, true)
+
 	exe, _ := os.Executable()
 	if os.Getenv("GIT_IPFS_VFS") != "" || exe[(len(exe) - 6):] == "-ipvfs" {
-		commit, _ := remote.Repo.CommitObject(root)
-		c, _ := h.cidForCommit(commit, remote)
-		remote.Logger.Printf("Adding: %s/content => %s\n", h.currentHash, c)
-		h.currentHash, err = h.api.PatchLink(h.currentHash, "content", c, true)
-
 		depth := 0
 		object.NewCommitPreorderIter(commit, nil, nil).ForEach(func(commit *object.Commit) error {
 			c, _ := h.cidForCommit(commit, remote)
@@ -157,7 +153,7 @@ func (h *IPFSHandler) Push(remote *core.Remote, local string, remoteRef string) 
 	if err != nil {
 		return "", fmt.Errorf("push: %v", err)
 	}
-	h.currentHash, err = h.api.PatchLink(h.currentHash, remoteRef, hashHolder, true)
+	h.currentHash, err = h.api.PatchLink(h.currentHash, ".git/" + remoteRef, hashHolder, true)
 	if err != nil {
 		return "", fmt.Errorf("push: %v", err)
 	}
@@ -166,7 +162,7 @@ func (h *IPFSHandler) Push(remote *core.Remote, local string, remoteRef string) 
 	if err != nil {
 		return "", fmt.Errorf("push: %v", err)
 	}
-	h.currentHash, err = h.api.PatchLink(h.currentHash, "HEAD", headRef, true)
+	h.currentHash, err = h.api.PatchLink(h.currentHash, ".git/HEAD", headRef, true)
 	if err != nil {
 		return "", fmt.Errorf("push: %v", err)
 	}
@@ -188,13 +184,13 @@ func (h *IPFSHandler) placeCommitCID(commit *object.Commit, c string, commitNum 
 	entry := h.fileSafeName(fmt.Sprintf("%s: %s – %s", when, commit.Author.Name, message))
 
 	h.log.Printf("Adding: %s → %s\r\x1b[A", entry, c)
-	h.currentHash, _ = h.api.PatchLink(h.currentHash, "vfs/commits/" + entry, c, true)
-	h.currentHash, _ = h.api.PatchLink(h.currentHash, fmt.Sprintf("vfs/rev/commits/%020d: %s", commitNum, entry), c, true)
+	h.currentHash, _ = h.api.PatchLink(h.currentHash, ".git/vfs/commits/" + entry, c, true)
+	h.currentHash, _ = h.api.PatchLink(h.currentHash, fmt.Sprintf(".git/vfs/rev/commits/%020d: %s", commitNum, entry), c, true)
 
 	entry = h.fileSafeName(fmt.Sprintf("%s: %s", when, message))
 	name := h.fileSafeName(commit.Author.Name)
-	h.currentHash, _ = h.api.PatchLink(h.currentHash, fmt.Sprintf("vfs/authors/%s/%s", name, entry), c, true)
-	h.currentHash, _ = h.api.PatchLink(h.currentHash, fmt.Sprintf("vfs/rev/authors/%s/%020d: %s", name, commitNum, entry), c, true)
+	h.currentHash, _ = h.api.PatchLink(h.currentHash, fmt.Sprintf(".git/vfs/authors/%s/%s", name, entry), c, true)
+	h.currentHash, _ = h.api.PatchLink(h.currentHash, fmt.Sprintf(".git/vfs/rev/authors/%s/%020d: %s", name, commitNum, entry), c, true)
 
 	return h.currentHash, nil
 }
@@ -234,51 +230,6 @@ func (h *IPFSHandler) getCid(cid string) (string, error) {
 	}
 
 	return buf.String(), nil
-}
-
-func (h *IPFSHandler) getRef(name string) (string, error) {
-	return h.getCid(path.Join(h.remoteName, name))
-}
-
-func (h *IPFSHandler) paths(api *ipfs.Shell, p string, level int) ([]refPath, error) {
-	h.log.Println("IPFSHandler.paths: ", p)
-	links, err := api.List(p)
-	if err != nil {
-		return nil, err
-	}
-	h.log.Println("IPFSHandler.paths.links:", len(links))
-
-	out := make([]refPath, 0)
-	for _, link := range links {
-		switch link.Type {
-		case ipfs.TDirectory:
-			// read files in /refs/heads/
-			if link.Name == "heads" || link.Name == "refs" {
-				sub, err := h.paths(api, path.Join(p, link.Name), level + 1)
-				if err != nil {
-					return nil, err
-				}
-				out = append(out, sub...)
-			}
-		case ipfs.TFile:
-			h.log.Printf("Found File: %s\n", path.Join(p, link.Name))
-			if link.Name == "HEAD" {
-				out = append(out, refPath{path.Join(p, link.Name), REFPATH_REF, link.Hash})
-			} else {
-				hashVal, err := h.getCid(link.Hash)
-				if err != nil {
-					return nil, err
-				}
-				out = append(out, refPath{path.Join(p, link.Name), REFPATH_HEAD, hashVal})
-			}
-		case -1, 0: //unknown, assume git node
-			h.log.Printf("Found Unknown: %s (%s)\n", path.Join(p, link.Name), link.Hash)
-			out = append(out, refPath{path.Join(p, link.Name), REFPATH_HEAD, link.Hash})
-		default:
-			return nil, fmt.Errorf("unexpected link type %d", link.Type)
-		}
-	}
-	return out, nil
 }
 
 func isNoLink(err error) bool {
