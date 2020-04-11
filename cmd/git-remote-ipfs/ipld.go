@@ -187,7 +187,7 @@ func (h *IPFSHandler) placeCommitCID(commit *object.Commit, c string, commitNum 
 	path := fmt.Sprintf("%s", entry)
 	h.log.Printf("Adding: %s => %s\n", path, c)
 	h.currentHash, _ = h.api.PatchLink(h.currentHash, "vfs/commits/" + entry, c, true)
-	h.currentHash, _ = h.api.PatchLink(h.currentHash, fmt.Sprintf("vfs/commits/fwd/%020d: %s", commitNum, entry), c, true)
+	h.currentHash, _ = h.api.PatchLink(h.currentHash, fmt.Sprintf("vfs/commits/rev/%020d: %s", commitNum, entry), c, true)
 
 	return h.currentHash, nil
 }

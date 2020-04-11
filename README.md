@@ -8,7 +8,7 @@ __This software is in an alpha state. The base repository structure is relativel
 1. `git clone https://github.com/dhappy/git-remote-ipfs.git`
 2. `cd git-remote-ipfs`
 3. `make`
-4. `sudo cp cmd/git-remote-ipfs/git-remote-ipfs /usr/lib/git-core/`
+4. `sudo cp cmd/git-remote-ipfs/git-remote-* /usr/lib/git-core/`
 
 ## Usage
 
@@ -26,7 +26,6 @@ Push:
 
 Push and create the `/vfs` entry in the IPFS file structure which allows access to all the files either by commit message or commit number:
 
-`GIT_IPFS_VFS=t git push ipfs:// master`
 `git push ipvfs:// master`
 
 ## Overview
