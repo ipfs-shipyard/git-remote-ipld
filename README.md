@@ -14,19 +14,19 @@ __This software is in an alpha state. The base repository structure is relativel
 
 Clone an example repository:
 
-`git clone ipfs://QmdwpxCnSVRmQotUZBgNfBjuTgDdARpsq3wYqcM6mgTvNF git-remote-ipfs`
+`git clone ipfs://QmR6Yt8MgjXKPzKQhxuBAw8yM8qScxHXABh9RAuBEosuvj git-remote-ipfs`
 
 Pull a commit:
 
-`git pull ipfs://2347e110c29742a1783134ef45f5bff58b29e40e`
+`git pull ipfs://QmawUDKvygz3kxVusjLVf3AVGuqcPBAneCjbTTeHjbarfH`
 
 Push:
 
-`git push ipfs:// master`
-
-Push and create the `/vfs` entry in the IPFS file structure which allows access to all the files either by commit message or commit number:
-
 `git push ipvfs:// master`
+
+Push without the `/vfs` directory:
+
+`git push ipfs:// master`
 
 ## Overview
 
@@ -52,10 +52,21 @@ This project mitigates that issue by leaving off the header and storing the simp
 
 When fetching, a map is created between the SHA1 keys and their CID along with the type. A traditional headered block can then be generated.
 
+## Generated File Structure
+
+* `content/`: the contents of the branch that was pushed
+* `vfs/commits/`: all the trees linked by commit message and sorted by date
+* `vfs/commits/rev/`: the commits as before, but prefaced with a count to reverse the order
+* `vfs/authors/#{name}/`: commits sorted by author
+* `vfs/authors/#{name}/rev/`: commits sorted by author reversed chronologically
+* `blobs/`, `trees/`, `commits/`, `tags/`: various Git objects stored by their SHA1 hash as filename
+* `refs/heads/*`: files containing the root hash of various Git branches
+* `HEAD`: the name of the branch contained in this repo
+
 # Troubleshooting
 * `fetch: manifest has unsupported version: x (we support y)` on any command
   - This usually means that cache tracker data format has changed
   - Remove the cache with: `rm -rf .git/remote-ipfs`
 
-## License
+# License
 MIT

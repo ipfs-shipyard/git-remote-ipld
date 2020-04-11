@@ -173,21 +173,27 @@ func (h *IPFSHandler) Push(remote *core.Remote, local string, remoteRef string) 
 	return local, nil
 }
 
+func (h *IPFSHandler) fileSafeName(name string) string {
+	name = strings.ReplaceAll(name, "%", "%25")
+	name = strings.ReplaceAll(name, "\x00", "%00")
+	return strings.ReplaceAll(name, "/", "%2F")
+}
+
 func (h *IPFSHandler) placeCommitCID(commit *object.Commit, c string, commitNum int) (string, error) {
 	// Pretty much the only disallowed character is / which will create a subdirectory
 	// %s are encoded so strings can be reliably percent decoded
-	message := strings.Split(commit.Message, "\n")[0]
-	messageEnc := strings.ReplaceAll(message, "%", "%25")
-	messageEnc = strings.ReplaceAll(messageEnc, "\x00", "%00")
-	messageEnc = strings.ReplaceAll(messageEnc, "/", "%2F")
-
-
 	when := commit.Author.When.Format(time.RFC3339)
-	entry := fmt.Sprintf("%s: %s – %s", when, commit.Author.Name, messageEnc)
-	path := fmt.Sprintf("%s", entry)
-	h.log.Printf("Adding: %s => %s\n", path, c)
+	message := strings.Split(commit.Message, "\n")[0]
+	entry := h.fileSafeName(fmt.Sprintf("%s: %s – %s", when, commit.Author.Name, message))
+
+	h.log.Printf("Adding: %s → %s\n", entry, c)
 	h.currentHash, _ = h.api.PatchLink(h.currentHash, "vfs/commits/" + entry, c, true)
 	h.currentHash, _ = h.api.PatchLink(h.currentHash, fmt.Sprintf("vfs/commits/rev/%020d: %s", commitNum, entry), c, true)
+
+	entry = h.fileSafeName(fmt.Sprintf("%s: %s", when, message))
+	name := h.fileSafeName(commit.Author.Name)
+	h.currentHash, _ = h.api.PatchLink(h.currentHash, fmt.Sprintf("vfs/authors/%s/%s", name, entry), c, true)
+	h.currentHash, _ = h.api.PatchLink(h.currentHash, fmt.Sprintf("vfs/authors/%s/rev/%020d: %s", name, commitNum, entry), c, true)
 
 	return h.currentHash, nil
 }
@@ -198,7 +204,6 @@ func (h *IPFSHandler) cidForCommit(commit *object.Commit, remote *core.Remote) (
 	c := "QmUNLLsPACCz1vLxQVkXqqLX5R1X345qqfHbsf67hvA3Nn"
 	for leaf, _ := files.Next(); leaf != nil; leaf, _ = files.Next() {
 		refId, err := remote.Tracker.Entry(leaf.Hash.String())
-		remote.Logger.Printf("Adding: %s => %s (%s)\n", leaf.Name, leaf.Hash, refId)
 		if err == nil && refId != "" {
 			c, err = h.api.PatchLink(c, leaf.Name, refId, true)
 			if err != nil {
