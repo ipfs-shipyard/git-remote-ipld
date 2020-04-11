@@ -14,8 +14,8 @@ import (
 	ipldgit "github.com/ipfs/go-ipld-git"
 	mh "github.com/multiformats/go-multihash"
 	sizedwaitgroup "github.com/remeh/sizedwaitgroup"
-	git "gopkg.in/src-d/go-git.v4"
-	plumbing "gopkg.in/src-d/go-git.v4/plumbing"
+	git "github.com/go-git/go-git/v5"
+	plumbing "github.com/go-git/go-git/v5/plumbing"
 )
 
 type Push struct {
@@ -158,8 +158,7 @@ func (p *Push) doWork(remote *Remote) (string, error) {
 			}
 		}
 	}
-	//p.log.Printf("\n")
-	p.log.Println("Returning:", p.shuntHash)
+	p.log.Printf("\n")
 	return p.shuntHash, nil
 }
 

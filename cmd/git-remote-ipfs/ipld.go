@@ -7,12 +7,14 @@ import (
 	"strings"
 	"log"
 	"os"
+	"time"
 
 	core "github.com/dhappy/git-remote-ipfs/core"
 	ipfs "github.com/ipfs/go-ipfs-api"
 
 	"github.com/ipfs/go-cid"
-	"gopkg.in/src-d/go-git.v4/plumbing"
+	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/go-git/go-git/v5/plumbing/object"
 )
 
 const (
@@ -134,49 +136,79 @@ func (h *IPFSHandler) Push(remote *core.Remote, local string, remoteRef string) 
 		return "", fmt.Errorf("command push: %v", err)
 	}
 
-	commit, err := remote.Repo.CommitObject(root)
-	tree, err := commit.Tree()
-	files := tree.Files()
-	for leaf, _ := files.Next(); leaf != nil; leaf, _ = files.Next() {
-		refId, err := remote.Tracker.Entry(leaf.Hash.String())
-		remote.Logger.Printf("IPFSHandler#Remote.repo %s => %s (%s)\n", leaf.Name, leaf.Hash, refId)
-		if err == nil && refId != "" {
-			h.currentHash, err = h.api.PatchLink(h.currentHash, "content/" + leaf.Name, refId, true)
-			if err != nil {
-				return "", fmt.Errorf("handler: %v", err)
-			}
-		} else {
-			remote.Logger.Println("Couldn't Find Blob: ", leaf.Hash)
-		}
+	exe, _ := os.Executable()
+	if os.Getenv("GIT_IPFS_VFS") != "" || exe[(len(exe) - 6):] == "-ipvfs" {
+		commit, _ := remote.Repo.CommitObject(root)
+		c, _ := h.cidForCommit(commit, remote)
+		remote.Logger.Printf("Adding: %s/content => %s\n", h.currentHash, c)
+		h.currentHash, err = h.api.PatchLink(h.currentHash, "content", c, true)
+
+		depth := 0
+		object.NewCommitPreorderIter(commit, nil, nil).ForEach(func(commit *object.Commit) error {
+			c, _ := h.cidForCommit(commit, remote)
+			depth += 1
+			_, err := h.placeCommitCID(commit, c, depth)
+			return err
+		})
 	}
 
 	hashHolder, err := h.api.Add(strings.NewReader(root.String()))
 	if err != nil {
 		return "", fmt.Errorf("push: %v", err)
 	}
-
 	h.currentHash, err = h.api.PatchLink(h.currentHash, remoteRef, hashHolder, true)
 	if err != nil {
 		return "", fmt.Errorf("push: %v", err)
 	}
 
-	gotHead, err := h.getRef("HEAD")
+	headRef, err := h.api.Add(strings.NewReader(remoteRef))
 	if err != nil {
 		return "", fmt.Errorf("push: %v", err)
 	}
-	if gotHead == "" {
-		headRef, err := h.api.Add(strings.NewReader(remoteRef))
-		if err != nil {
-			return "", fmt.Errorf("push: %v", err)
-		}
-
-		h.currentHash, err = h.api.PatchLink(h.currentHash, "HEAD", headRef, true)
-		if err != nil {
-			return "", fmt.Errorf("push: %v", err)
-		}
+	h.currentHash, err = h.api.PatchLink(h.currentHash, "HEAD", headRef, true)
+	if err != nil {
+		return "", fmt.Errorf("push: %v", err)
 	}
 
 	return local, nil
+}
+
+func (h *IPFSHandler) placeCommitCID(commit *object.Commit, c string, commitNum int) (string, error) {
+	// Pretty much the only disallowed character is / which will create a subdirectory
+	// %s are encoded so strings can be reliably percent decoded
+	message := strings.Split(commit.Message, "\n")[0]
+	messageEnc := strings.ReplaceAll(message, "%", "%25")
+	messageEnc = strings.ReplaceAll(messageEnc, "\x00", "%00")
+	messageEnc = strings.ReplaceAll(messageEnc, "/", "%2F")
+
+
+	when := commit.Author.When.Format(time.RFC3339)
+	entry := fmt.Sprintf("%s: %s – %s", when, commit.Author.Name, messageEnc)
+	path := fmt.Sprintf("%s", entry)
+	h.log.Printf("Adding: %s => %s\n", path, c)
+	h.currentHash, _ = h.api.PatchLink(h.currentHash, "vfs/commits/" + entry, c, true)
+	h.currentHash, _ = h.api.PatchLink(h.currentHash, fmt.Sprintf("vfs/commits/fwd/%020d: %s", commitNum, entry), c, true)
+
+	return h.currentHash, nil
+}
+
+func (h *IPFSHandler) cidForCommit(commit *object.Commit, remote *core.Remote) (string, error) {
+	tree, _ := commit.Tree()
+	files := tree.Files()
+	c := "QmUNLLsPACCz1vLxQVkXqqLX5R1X345qqfHbsf67hvA3Nn"
+	for leaf, _ := files.Next(); leaf != nil; leaf, _ = files.Next() {
+		refId, err := remote.Tracker.Entry(leaf.Hash.String())
+		remote.Logger.Printf("Adding: %s => %s (%s)\n", leaf.Name, leaf.Hash, refId)
+		if err == nil && refId != "" {
+			c, err = h.api.PatchLink(c, leaf.Name, refId, true)
+			if err != nil {
+				return "", fmt.Errorf("cidForCommit: %v", err)
+			}
+		} else {
+			remote.Logger.Println("Couldn't Find Blob: ", leaf.Hash)
+		}
+	}
+	return c, nil
 }
 
 func (h *IPFSHandler) getCid(cid string) (string, error) {

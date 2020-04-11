@@ -4,23 +4,30 @@ Push and fetch commits to IPFS!
 
 __This software is in an alpha state. The base repository structure is relatively stable and repositories should be backward compatible.__
 
-## Usage
-```
-Clone an example repository:
-$ git clone ipfs://QmdwpxCnSVRmQotUZBgNfBjuTgDdARpsq3wYqcM6mgTvNF
-
-Pull a commit:
-$ git pull ipfs://2347e110c29742a1783134ef45f5bff58b29e40e
-
-Push:
-$ git push --set-upstream ipld:// master
-```
-
 ## Installation
 1. `git clone https://github.com/dhappy/git-remote-ipfs.git`
 2. `cd git-remote-ipfs`
 3. `make`
 4. `sudo cp cmd/git-remote-ipfs/git-remote-ipfs /usr/lib/git-core/`
+
+## Usage
+
+Clone an example repository:
+
+`git clone ipfs://QmdwpxCnSVRmQotUZBgNfBjuTgDdARpsq3wYqcM6mgTvNF git-remote-ipfs`
+
+Pull a commit:
+
+`git pull ipfs://2347e110c29742a1783134ef45f5bff58b29e40e`
+
+Push:
+
+`git push ipfs:// master`
+
+Push and create the `/vfs` entry in the IPFS file structure which allows access to all the files either by commit message or commit number:
+
+`GIT_IPFS_VFS=t git push ipfs:// master`
+`git push ipvfs:// master`
 
 ## Overview
 
