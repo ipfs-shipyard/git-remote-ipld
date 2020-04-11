@@ -151,6 +151,7 @@ func (h *IPFSHandler) Push(remote *core.Remote, local string, remoteRef string) 
 			return err
 		})
 	}
+	h.log.Println()
 
 	hashHolder, err := h.api.Add(strings.NewReader(root.String()))
 	if err != nil {
@@ -186,14 +187,14 @@ func (h *IPFSHandler) placeCommitCID(commit *object.Commit, c string, commitNum 
 	message := strings.Split(commit.Message, "\n")[0]
 	entry := h.fileSafeName(fmt.Sprintf("%s: %s – %s", when, commit.Author.Name, message))
 
-	h.log.Printf("Adding: %s → %s\n", entry, c)
+	h.log.Printf("Adding: %s → %s\r\x1b[A", entry, c)
 	h.currentHash, _ = h.api.PatchLink(h.currentHash, "vfs/commits/" + entry, c, true)
-	h.currentHash, _ = h.api.PatchLink(h.currentHash, fmt.Sprintf("vfs/commits/rev/%020d: %s", commitNum, entry), c, true)
+	h.currentHash, _ = h.api.PatchLink(h.currentHash, fmt.Sprintf("vfs/rev/commits/%020d: %s", commitNum, entry), c, true)
 
 	entry = h.fileSafeName(fmt.Sprintf("%s: %s", when, message))
 	name := h.fileSafeName(commit.Author.Name)
 	h.currentHash, _ = h.api.PatchLink(h.currentHash, fmt.Sprintf("vfs/authors/%s/%s", name, entry), c, true)
-	h.currentHash, _ = h.api.PatchLink(h.currentHash, fmt.Sprintf("vfs/authors/%s/rev/%020d: %s", name, commitNum, entry), c, true)
+	h.currentHash, _ = h.api.PatchLink(h.currentHash, fmt.Sprintf("vfs/rev/authors/%s/%020d: %s", name, commitNum, entry), c, true)
 
 	return h.currentHash, nil
 }
