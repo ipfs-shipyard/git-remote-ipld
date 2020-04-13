@@ -83,6 +83,30 @@ func (h *IPFSHandler) GetRemoteName() string {
 func (h *IPFSHandler) List(remote *core.Remote, forPush bool) ([]string, error) {
 	out := make([]string, 0)
 	if !forPush {
+		if strings.HasPrefix(h.remoteName, "key:") {
+			cmd := exec.Command("ipfs", "key", "list", "-l")
+
+			var out bytes.Buffer; cmd.Stdout = &out; cmd.Stderr = &out
+
+			err := cmd.Run()
+			if err != nil { return nil, err }
+
+			key := h.remoteName[4:]
+			re := regexp.MustCompile(`\s(.+)\s+` + key)
+			cid := re.FindStringSubmatch(out.String())[1]
+
+			cmd = exec.Command("ipfs", "name", "resolve", cid)
+
+			var out2 bytes.Buffer; cmd.Stdout = &out2; cmd.Stderr = &out2
+
+			h.log.Printf("IPNS Resolving \x1b[35m%s\x1b[39m:", cid)
+			err = cmd.Run()
+			if err != nil { return nil, err }
+
+			re = regexp.MustCompile(`/ipfs/(.+)`)
+			h.remoteName = re.FindStringSubmatch(out2.String())[1]
+		}
+
 		head, err := h.getCid(fmt.Sprintf("%s/.git/HEAD", h.remoteName))
 		if err != nil {
 			return nil, err
