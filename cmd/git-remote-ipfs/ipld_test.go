@@ -2,22 +2,22 @@ package main
 
 import (
 	"bytes"
-	"github.com/ipfs-shipyard/git-remote-ipld/util"
 	"io"
 	"io/ioutil"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/dhappy/git-remote-ipfs/util"
 )
 
 func TestCapabilities(t *testing.T) {
 	tmpdir := setupTest(t)
 	defer os.RemoveAll(tmpdir)
 
-	// git clone ipld::d5b0d08c180fd7a9bf4f684a37e60ceeb4d25ec8
-	args := []string{"git-remote-ipld", "origin", "ipld://QmZVjKhhUrjodywbU4hpCL32M7CR7Sbow2MSqRpB3PGBUe"}
+	// git clone ipfs://QmRwmeigXNtXnrR18qGUxLmdXJBXCBZw311vqczeTfcgwz
+	args := []string{"git-remote-ipld", "origin", "ipfs://QmRwmeigXNtXnrR18qGUxLmdXJBXCBZw311vqczeTfcgwz"}
 
 	listExp := []string{
 		"@refs/heads/master HEAD",
@@ -26,14 +26,14 @@ func TestCapabilities(t *testing.T) {
 	listForPushExp := []string{
 		"0000000000000000000000000000000000000000 refs/heads/french",
 		"0000000000000000000000000000000000000000 refs/heads/italian",
-		"d5b0d08c180fd7a9bf4f684a37e60ceeb4d25ec8 refs/heads/master",
+		"0000000000000000000000000000000000000000 refs/heads/master",
 	}
 
 	testCase(t, args, "capabilities", []string{"push", "fetch"})
 	testCase(t, args, "list", listExp)
 	testCase(t, args, "list for-push", listForPushExp)
 
-	// mock/git> git push --set-upstream ipld:: master
+	// mock/git> git push --set-upstream ipfs:: master
 	testCase(t, args, "push refs/heads/master:refs/heads/master", []string{})
 
 	testCase(t, args, "fetch d5b0d08c180fd7a9bf4f684a37e60ceeb4d25ec8 refs/heads/master\n", []string{""})
@@ -43,8 +43,7 @@ func TestCapabilities(t *testing.T) {
 func testCase(t *testing.T, args []string, input string, expected []string) {
 	reader := strings.NewReader(input + "\n")
 	var writer bytes.Buffer
-	logger := log.New(os.Stderr, "", 0)
-	err := Main(args, reader, &writer, logger)
+	err := Main(args, reader, &writer)
 	if err != nil && err != io.EOF {
 		t.Fatal(err)
 	}
@@ -65,7 +64,7 @@ func comparePullToMock(t *testing.T, tmpdir, mock string) {
 func compareContents(t *testing.T, src, dst string) {
 	src = filepath.Clean(src)
 	dst = filepath.Clean(dst)
-	err := util.CompareDirs(src, dst, []string{"ipld"})
+	err := util.CompareDirs(src, dst, []string{"remote-ipfs"})
 	if err != nil {
 		t.Fatal(err)
 	}

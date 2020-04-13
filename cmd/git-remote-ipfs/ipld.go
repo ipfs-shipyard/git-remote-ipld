@@ -83,15 +83,13 @@ func (h *IPFSHandler) GetRemoteName() string {
 func (h *IPFSHandler) List(remote *core.Remote, forPush bool) ([]string, error) {
 	out := make([]string, 0)
 	if !forPush {
-		_, _, err := h.api.BlockStat(fmt.Sprintf("%s/.git/", h.remoteName))
-		if err == nil {
-			h.remoteName += "/.git"
+		head, err := h.getCid(fmt.Sprintf("%s/.git/HEAD", h.remoteName))
+		if err != nil {
+			return nil, err
 		}
-
-		head, err := h.getCid(fmt.Sprintf("%s/HEAD", h.remoteName))
 		out = append(out, fmt.Sprintf("@%s HEAD", head))
 
-		heads, err := h.api.List(fmt.Sprintf("%s/refs/heads/", h.remoteName))
+		heads, err := h.api.List(fmt.Sprintf("%s/.git/refs/heads/", h.remoteName))
 		for _, head := range heads {
 			hash, _ := h.getCid(head.Hash)
 			out = append(out, fmt.Sprintf("%s refs/heads/%s", hash, head.Name))
