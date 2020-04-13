@@ -29,7 +29,7 @@ Push without the `/vfs` directory:
 Push to an IPNS remote:
 
 * `ipfs key gen --type=rsa --size=2048 mysite`
-* `git remote add ipns::key:mysite`
+* `git remote add ipns ipns::key:mysite`
 * `git push ipns`
 
 ## Generated File Structure
