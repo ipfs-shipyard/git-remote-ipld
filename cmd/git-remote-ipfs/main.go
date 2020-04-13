@@ -10,7 +10,7 @@ import (
 	"bytes"
 	"regexp"
 
-	"github.com/dhappy/git-remote-ipfs/core"
+	"github.com/ipfs-shipyard/git-remote-ipfs/core"
 )
 
 const (

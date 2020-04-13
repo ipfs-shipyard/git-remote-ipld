@@ -3,7 +3,7 @@
 Push and fetch commits to IPFS with a published version of the contents.
 
 ## Installation
-1. `git clone https://github.com/dhappy/git-remote-ipfs.git`
+1. `git clone https://github.com/ipfs-shipyard/git-remote-ipfs.git`
 2. `cd git-remote-ipfs`
 3. `make`
 4. `sudo cp cmd/git-remote-ipfs/git-remote-* /usr/lib/git-core/`
@@ -28,9 +28,9 @@ Push without the `/vfs` directory:
 
 Push to an IPNS remote:
 
-`ipfs key gen --type=rsa --size=2048 mysite`
-`git remote add ipns::key:mysite`
-`git push ipns`
+* `ipfs key gen --type=rsa --size=2048 mysite`
+* `git remote add ipns::key:mysite`
+* `git push ipns`
 
 ## Generated File Structure
 

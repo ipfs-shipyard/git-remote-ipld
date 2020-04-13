@@ -11,7 +11,7 @@ import (
 	"os/exec"
 	"regexp"
 
-	core "github.com/dhappy/git-remote-ipfs/core"
+	core "github.com/ipfs-shipyard/git-remote-ipfs/core"
 	ipfs "github.com/ipfs/go-ipfs-api"
 
 	"github.com/go-git/go-git/v5/plumbing"
