@@ -22,8 +22,6 @@ const (
 func Main(args []string, reader io.Reader, writer io.Writer) error {
 	log := log.New(os.Stderr, "\x1b[34mmain:\x1b[39m ", 0)
 
-	log.Printf("Program Starting: %s\n", args)
-
 	if len(args) < 3 {
 		return fmt.Errorf("Usage: git-remote-ipfs remote-name url")
 	}

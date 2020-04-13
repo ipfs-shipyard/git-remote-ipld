@@ -16,7 +16,7 @@ Push:
 
 Clone an example repository:
 
-`git clone ipfs://Qmdi93vJjJdck7AXzx6mPAzpXfK1TMGdaGBLKLARfckzx7 git-remote-ipfs`
+`git clone ipns://git-remote-ipfs.dhappy.org git-remote-ipfs`
 
 Pull a commit:
 
@@ -26,9 +26,11 @@ Push without the `/vfs` directory:
 
 `git push ipfs:: master`
 
-Add an IPNS remote:
+Push to an IPNS remote:
 
+`ipfs key gen --type=rsa --size=2048 mysite`
 `git remote add ipns::key:mysite`
+`git push ipns`
 
 ## Generated File Structure
 
