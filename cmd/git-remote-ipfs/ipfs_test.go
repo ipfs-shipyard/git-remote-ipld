@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dhappy/git-remote-ipfs/util"
+	"github.com/ipfs-shipyard/git-remote-ipfs/util"
 )
 
 func TestCapabilities(t *testing.T) {
