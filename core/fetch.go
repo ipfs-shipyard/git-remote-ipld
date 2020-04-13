@@ -75,7 +75,7 @@ func (f *Fetch) FetchHash(base string, remote *Remote) error {
 	go func() {
 		f.todo <- base
 	}()
-	
+
 	f.getGitObjects("blob", remote.Handler.GetRemoteName())
 	f.getGitObjects("commit", remote.Handler.GetRemoteName())
 	f.getGitObjects("tag", remote.Handler.GetRemoteName())
