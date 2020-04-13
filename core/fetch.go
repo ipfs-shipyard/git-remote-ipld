@@ -85,7 +85,7 @@ func (f *Fetch) FetchHash(base string, remote *Remote) error {
 }
 
 func (f *Fetch) getGitObjects(objType string, remoteName string) error {
-	shunts, err := f.api.List(fmt.Sprintf("%s/%ss", remoteName, objType))
+	shunts, err := f.api.List(fmt.Sprintf("%s/.git/%ss", remoteName, objType))
 	if err != nil {
 		return err
 	}
@@ -139,7 +139,7 @@ func (f *Fetch) processSingle(hash string) error {
 
 		shunt, ok := f.shunts[hash]
 		if !ok {
-			f.errCh <- fmt.Errorf("fetch !Missing Block!: %v", err)
+			f.errCh <- fmt.Errorf("Fetch Missing Block!: %v", err)
 			return
 		}
 
