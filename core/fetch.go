@@ -11,10 +11,8 @@ import (
 	"sync"
 	"bytes"
 
-	"github.com/ipfs/go-cid"
 	ipfs "github.com/ipfs/go-ipfs-api"
 	"github.com/ipfs/go-ipld-git"
-	mh "github.com/multiformats/go-multihash"
 	"github.com/remeh/sizedwaitgroup"
 )
 
@@ -83,8 +81,6 @@ func (f *Fetch) FetchHash(base string, remote *Remote) error {
 	f.getGitObjects("tag", remote.Handler.GetRemoteName())
 	f.getGitObjects("tree", remote.Handler.GetRemoteName())
 
-	f.log.Printf("Shunt! %s (%d)\n", remote.Handler.GetRemoteName(), len(f.shunts))
-
 	return f.doWork()
 }
 
@@ -93,7 +89,6 @@ func (f *Fetch) getGitObjects(objType string, remoteName string) error {
 	if err != nil {
 		return err
 	}
-	f.log.Printf("Adding %d %s(s)\n", len(shunts), objType)
 	for _, s := range shunts {
 		f.shunts[s.Name] = Object{ objType, s.Hash }
 	}
@@ -101,7 +96,6 @@ func (f *Fetch) getGitObjects(objType string, remoteName string) error {
 }
 
 func (f *Fetch) doWork() error {
-	f.log.Println("Fetch#doWork")
 	for {
 		select {
 		case err := <-f.errCh:
@@ -115,28 +109,15 @@ func (f *Fetch) doWork() error {
 			f.done++
 		}
 
-		//f.log.Printf("%d/%d\r\x1b[A", f.done, f.todoc)
-		f.log.Printf("%d/%d\n", f.done, f.todoc)
-
 		if f.done == f.todoc {
+			f.log.Println()
 			f.wg.Wait()
-			f.log.Printf("\n")
 			return nil
 		}
 	}
 }
 
 func (f *Fetch) processSingle(hash string) error {
-	f.log.Println("Fetch#processSingle.hash == ", hash)
-	mhash, err := mh.FromHexString("1114" + hash)
-	if err != nil {
-		return fmt.Errorf("fetch: %v", err)
-	}
-
-	c := cid.NewCidV1(cid.GitRaw, mhash).String()
-
-	f.log.Println("Fetch#processSingle.cid == ", c)
-
 	sha, err := hex.DecodeString(hash)
 	if err != nil {
 		return fmt.Errorf("fetch: %v", err)
@@ -154,16 +135,15 @@ func (f *Fetch) processSingle(hash string) error {
 			return
 		}
 
-		f.log.Println("Fetch#prepHashPath == ", hash)
-
 		object := []byte(nil)
 
 		shunt, ok := f.shunts[hash]
-		f.log.Printf("Fetch#BlockGet == %s (%s)\n", hash, shunt.cid)
 		if !ok {
 			f.errCh <- fmt.Errorf("fetch !Missing Block!: %v", err)
 			return
 		}
+
+		f.log.Printf("(%d/%d) %s as %s\r\x1b[A", f.done, f.todoc, hash, shunt.cid)
 
 		r, _ := f.api.Cat(shunt.cid)
 		defer r.Close()
@@ -172,10 +152,6 @@ func (f *Fetch) processSingle(hash string) error {
 		out := buff.String()
 		object = append([]byte(fmt.Sprintf("%s %d\x00", shunt.objType, len(out))), out...)
 		
-		if object == nil {
-			f.log.Println("Empty Block! ", c)
-		}
-
 		if shunt.objType != "blob" {
 			f.processLinks(object)
 		}
@@ -183,18 +159,12 @@ func (f *Fetch) processSingle(hash string) error {
 		object = compressObject(object)
 
 		_, err = os.Stat(*objectPath)
-		if !os.IsNotExist(err) {
-			f.log.Println("Skipping Existing: ", *objectPath)
-		} else {
-			f.log.Println("Fetch#writing: ", *objectPath)
-
+		if os.IsNotExist(err) {
 			err = ioutil.WriteFile(*objectPath, object, 0444)
 			if err != nil {
 				f.errCh <- fmt.Errorf("fetch: %v", err)
 				return
 			}
-		
-			f.log.Println("Fetch#wrote: ", *objectPath)
 		}
 
 		//TODO: see if moving this higher would help
@@ -205,7 +175,6 @@ func (f *Fetch) processSingle(hash string) error {
 }
 
 func (f *Fetch) processLinks(object []byte) error {
-	f.log.Println("len(Fetch#processLinks.object) ==", len(object))
 	nd, err := ipldgit.ParseObjectFromBuffer(object)
 	if err != nil {
 		return fmt.Errorf("fetch: %v", err)
@@ -215,8 +184,6 @@ func (f *Fetch) processLinks(object []byte) error {
 	for _, link := range links {
 		mhash := link.Cid.Hash()
 		hash := mhash.HexString()[4:]
-
-		f.log.Println("Fetch#processLinks.hash ==", hash)
 
 		f.snLk.RLock()
 		_, proc := f.seen[hash]
@@ -232,7 +199,6 @@ func (f *Fetch) processLinks(object []byte) error {
 
 		f.todo <- hash
 	}
-	f.log.Println("End Fetch#processLinks:", len(object))
 	return nil
 }
 

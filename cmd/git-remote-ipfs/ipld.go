@@ -85,11 +85,9 @@ func (h *IPFSHandler) List(remote *core.Remote, forPush bool) ([]string, error) 
 	if !forPush {
 		_, _, err := h.api.BlockStat(fmt.Sprintf("%s/.git/", h.remoteName))
 		if err == nil {
-			h.log.Printf("Setting GIT DIR: %s → %s\n", h.remoteName, ".git")
 			h.remoteName += "/.git"
 		}
 
-		h.log.Printf("Getting HEAD Ref:", h.remoteName)
 		head, err := h.getCid(fmt.Sprintf("%s/HEAD", h.remoteName))
 		out = append(out, fmt.Sprintf("@%s HEAD", head))
 
@@ -139,7 +137,7 @@ func (h *IPFSHandler) Push(remote *core.Remote, local string, remoteRef string) 
 	h.currentHash, err = h.api.PatchLink(c, ".git", gitRef, true)
 
 	exe, _ := os.Executable()
-	if os.Getenv("GIT_IPFS_VFS") != "" || exe[(len(exe) - 6):] == "-ipvfs" {
+	if os.Getenv("GIT_IPFS_VFS") != "" || exe[(len(exe) - 5):] != "-ipfs" {
 		depth := 0
 		object.NewCommitPreorderIter(commit, nil, nil).ForEach(func(commit *object.Commit) error {
 			c, _ := h.cidForCommit(commit, remote)

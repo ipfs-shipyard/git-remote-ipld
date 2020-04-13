@@ -42,7 +42,6 @@ func Main(args []string, reader io.Reader, writer io.Writer) error {
 
 		re := regexp.MustCompile(`/ipfs/(.+)`)
 		remoteName = re.FindStringSubmatch(out.String())[1]
-		log.Printf("\x1b[32m%s\x1b[39m\n", remoteName)
 	}
 	if strings.HasPrefix(remoteName, IPFS_PREFIX) {
 		remoteName = remoteName[len(IPFS_PREFIX):]
