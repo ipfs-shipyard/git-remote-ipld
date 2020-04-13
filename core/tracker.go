@@ -26,9 +26,8 @@ func NewTracker(gitPath string) (*Tracker, error) {
 	}
 
 	opt := badger.DefaultOptions(cacheDir)
-	fmt.Printf("Starting Badger\n")
+	opt.Logger = nil
 	db, err := badger.Open(opt)
-	fmt.Printf("Started Badger\n")
 	if err != nil {
 		return nil, err
 	}

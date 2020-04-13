@@ -26,6 +26,10 @@ Push without the `/vfs` directory:
 
 `git push ipfs:: master`
 
+Add an IPNS remote:
+
+`git remote add ipns::key:mysite`
+
 ## Generated File Structure
 
 * `/`: the contents of the branch that was pushed

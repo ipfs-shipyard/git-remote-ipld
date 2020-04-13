@@ -25,7 +25,7 @@ type RemoteHandler interface {
 type Remote struct {
 	reader   io.Reader
 	writer   io.Writer
-	Logger   *log.Logger
+	Log      *log.Logger
 	localDir string
 
 	Repo    *git.Repository
@@ -36,13 +36,10 @@ type Remote struct {
 	todo []func() (string, error)
 }
 
-func NewRemote(handler RemoteHandler, reader io.Reader, writer io.Writer, logger *log.Logger) (*Remote, error) {
-	if logger == nil {
-		logger = log.New(os.Stderr, "", 0)
-	}
+func NewRemote(handler RemoteHandler, reader io.Reader, writer io.Writer) (*Remote, error) {
+	logger := log.New(os.Stderr, "", 0)
 
 	localDir, err := GetLocalDir()
-	logger.Printf("Instantiating New 'Remote': %s\n", localDir)
 	if err != nil {
 		return nil, err
 	}
@@ -65,7 +62,7 @@ func NewRemote(handler RemoteHandler, reader io.Reader, writer io.Writer, logger
 	remote := &Remote{
 		reader:   reader,
 		writer:   writer,
-		Logger:   logger,
+		Log:      logger,
 		localDir: localDir,
 
 		Repo:    repo,
@@ -82,7 +79,7 @@ func NewRemote(handler RemoteHandler, reader io.Reader, writer io.Writer, logger
 }
 
 func (r *Remote) Printf(format string, a ...interface{}) (n int, err error) {
-	r.Logger.Printf("> "+format, a...)
+	r.Log.Printf("> " + format, a...)
 	return fmt.Fprintf(r.writer, format, a...)
 }
 
@@ -133,7 +130,7 @@ loop:
 
 		command = strings.Trim(command, "\n")
 
-		r.Logger.Printf("< %s", command)
+		r.Log.Printf("< %s", command)
 		switch {
 		case command == "capabilities":
 			r.Printf("push\n")

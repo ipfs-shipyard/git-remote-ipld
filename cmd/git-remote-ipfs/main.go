@@ -6,34 +6,54 @@ import (
 	"log"
 	"os"
 	"strings"
+	"os/exec"
+	"bytes"
+	"regexp"
 
 	"github.com/dhappy/git-remote-ipfs/core"
 )
 
 const (
-	IPLD_PREFIX = "ipld://"
+	IPNS_PREFIX = "ipns://"
 	IPFS_PREFIX = "ipfs://"
-
 	EMPTY_REPO = "QmUNLLsPACCz1vLxQVkXqqLX5R1X345qqfHbsf67hvA3Nn"
 )
 
-func Main(args []string, reader io.Reader, writer io.Writer, logger *log.Logger) error {
-	fmt.Printf("Program Starting\n")
+func Main(args []string, reader io.Reader, writer io.Writer) error {
+	log := log.New(os.Stderr, "\x1b[34mmain:\x1b[39m ", 0)
+
+	log.Printf("Program Starting: %s\n", args)
 
 	if len(args) < 3 {
 		return fmt.Errorf("Usage: git-remote-ipfs remote-name url")
 	}
 
 	remoteName := args[2]
-	if strings.HasPrefix(remoteName, IPLD_PREFIX) || strings.HasPrefix(remoteName, IPFS_PREFIX) {
-		remoteName = remoteName[len(IPLD_PREFIX):]
-	}
+	if strings.HasPrefix(remoteName, IPNS_PREFIX) {
+		remoteName = remoteName[len(IPFS_PREFIX):]
 
+		cmd := exec.Command("ipfs", "name", "resolve", remoteName)
+
+		var out bytes.Buffer; cmd.Stdout = &out; cmd.Stderr = &out
+
+		log.Printf("IPNS Resolving \x1b[35m%s\x1b[39m:", remoteName)
+		err := cmd.Run()
+		if err != nil {
+			return err
+		}
+
+		re := regexp.MustCompile(`/ipfs/(.+)`)
+		remoteName = re.FindStringSubmatch(out.String())[1]
+		log.Printf("\x1b[32m%s\x1b[39m\n", remoteName)
+	}
+	if strings.HasPrefix(remoteName, IPFS_PREFIX) {
+		remoteName = remoteName[len(IPFS_PREFIX):]
+	}
 	if remoteName == "" {
 		remoteName = EMPTY_REPO
 	}
 
-	remote, err := core.NewRemote(&IPFSHandler{remoteName: remoteName}, reader, writer, logger)
+	remote, err := core.NewRemote(&IPFSHandler{remoteName: remoteName}, reader, writer)
 	if err != nil {
 		return err
 	}
@@ -50,8 +70,8 @@ func Main(args []string, reader io.Reader, writer io.Writer, logger *log.Logger)
 }
 
 func main() {
-	if err := Main(os.Args, os.Stdin, os.Stdout, nil); err != nil {
-		fmt.Fprintf(os.Stderr, "\x1b[K")
+	if err := Main(os.Args, os.Stdin, os.Stdout); err != nil {
+		//fmt.Fprintf(os.Stderr, "\x1b[K")
 		log.Fatal(err)
 	}
 }

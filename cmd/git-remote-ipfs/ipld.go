@@ -8,11 +8,12 @@ import (
 	"log"
 	"os"
 	"time"
+	"os/exec"
+	"regexp"
 
 	core "github.com/dhappy/git-remote-ipfs/core"
 	ipfs "github.com/ipfs/go-ipfs-api"
 
-	"github.com/ipfs/go-cid"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
 )
@@ -50,9 +51,27 @@ func (h *IPFSHandler) Initialize(remote *core.Remote) error {
 }
 
 func (h *IPFSHandler) Finish(remote *core.Remote) error {
-	//TODO: publish
 	if h.didPush {
-		remote.Logger.Printf("Pushed to IPFS as \x1b[32mipfs://%s\x1b[39m\n", h.currentHash)
+		if !strings.HasPrefix(h.remoteName, "key:") {
+			remote.Log.Printf("Pushed to IPFS as \x1b[32mipfs://%s\x1b[39m\n", h.currentHash)
+		} else {
+			key := h.remoteName[4:]
+			cmd := exec.Command("ipfs", "name", "publish", "--key=" + key, h.currentHash)
+
+			var out bytes.Buffer
+			cmd.Stdout = &out
+			cmd.Stderr = &out
+
+			remote.Log.Printf("Publishing \x1b[35m%s\x1b[39m to \x1b[36m%s\x1b[39m\n", h.currentHash, key)
+			err := cmd.Run()
+			if err != nil {
+				return err
+			}
+
+			re := regexp.MustCompile(`Published to (.+):`)
+			ipnsAddr := re.FindStringSubmatch(out.String())[1]
+			remote.Log.Printf("Pushed to IPNS as \x1b[32mipns://%s\x1b[39m\n", ipnsAddr)
+		}
 	}
 	return nil
 }
@@ -87,25 +106,7 @@ func (h *IPFSHandler) List(remote *core.Remote, forPush bool) ([]string, error) 
 
 		err = it.ForEach(func(ref *plumbing.Reference) error {
 			remoteRef := "0000000000000000000000000000000000000000"
-
-			localRef, err := h.api.ResolvePath(path.Join(h.currentHash, ref.Name().String()))
-			if err != nil && !isNoLink(err) {
-				return err
-			}
-			if err == nil {
-				refCid, err := cid.Parse(localRef)
-				if err != nil {
-					return err
-				}
-
-				remoteRef, err = core.HexFromCid(refCid)
-				if err != nil {
-					return err
-				}
-			}
-
 			out = append(out, fmt.Sprintf("%s %s", remoteRef, ref.Name()))
-
 			return nil
 		})
 		if err != nil {
@@ -192,6 +193,8 @@ func (h *IPFSHandler) placeCommitCID(commit *object.Commit, c string, commitNum 
 	h.currentHash, _ = h.api.PatchLink(h.currentHash, fmt.Sprintf(".git/vfs/authors/%s/%s", name, entry), c, true)
 	h.currentHash, _ = h.api.PatchLink(h.currentHash, fmt.Sprintf(".git/vfs/rev/authors/%s/%020d: %s", name, commitNum, entry), c, true)
 
+	h.currentHash, _ = h.api.PatchLink(h.currentHash, fmt.Sprintf(".git/vfs/trees/%s", commit.Hash.String()), c, true)
+
 	return h.currentHash, nil
 }
 
@@ -207,7 +210,7 @@ func (h *IPFSHandler) cidForCommit(commit *object.Commit, remote *core.Remote) (
 				return "", fmt.Errorf("cidForCommit: %v", err)
 			}
 		} else {
-			remote.Logger.Println("Couldn't Find Blob: ", leaf.Hash)
+			remote.Log.Println("Couldn't Find Blob: ", leaf.Hash)
 		}
 	}
 	return c, nil
