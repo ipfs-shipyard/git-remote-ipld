@@ -54,7 +54,7 @@ Tags are named links to specific commits. They are frequently used to mark versi
 
 The helper traverses the tree and parents of the root Commit and stores them all on the remote.
 
-Integrating Git and IPFS has been on ongoing work with several solutions over the years. This one is based on [git-remote-ipld](https://github.com/ipfs-shipyard/git-remote-ipld) which `ipfs block put` to store the Commit tree using SHA1. Fetching converts the SHA1 keys in the raw git blocks to IPFS content ids and retrieves them directly.
+Integrating Git and IPFS has been on ongoing work with several solutions over the years. The predecessor to this one used `ipfs block put` to store the Commit tree using SHA1. Fetching converts the SHA1 keys in the raw git blocks to IPFS content ids and retrieves them directly.
 
 The SHA1 keys used by Git aren't exactly the hash of the object. Each serialized form is prefaced with a header of the format `"#{type} #{size}\x00". So a Blob in Git is this header plus the file contents.
 
