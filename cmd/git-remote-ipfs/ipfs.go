@@ -155,6 +155,12 @@ func (h *IPFSHandler) Push(remote *core.Remote, local string, remoteRef string) 
 
 	root := localRef.Hash()
 
+	cached, err := remote.Tracker.Entry("repo:" + root.String())
+	if cached != "" {
+		h.currentHash = cached
+		return local, nil
+	}
+
 	push := remote.NewPush()
 	gitRef, err := push.PushHash(root.String(), remote)
 	if err != nil {
@@ -203,6 +209,8 @@ func (h *IPFSHandler) Push(remote *core.Remote, local string, remoteRef string) 
 	if err != nil {
 		return "", fmt.Errorf("push: %v", err)
 	}
+
+	remote.Tracker.AddEntry("repo:" + root.String(), h.currentHash)
 
 	return local, nil
 }
