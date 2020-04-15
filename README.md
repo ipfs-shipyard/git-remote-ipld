@@ -12,7 +12,7 @@ Push and fetch commits to IPFS with a published version of the contents.
 
 Push:
 
-`git push ipvfs:: master`
+`git push ipfs:: master`
 
 Clone an example repository:
 
@@ -22,22 +22,26 @@ Pull a commit:
 
 `git pull ipfs://Qma5iwyvJqxzHqCT9aqyc7dxZXXGoDeSUyPYFqkCWGJw92`
 
-Push without the `/vfs` directory:
+Push without the `/vfs` directory (this takes about half as long, but might make your repository incompatible with tools that don't want to parse the commit tree):
 
-`git push ipfs:: master`
+`GIT_IPFS_KVFS=t git push ipfs:: master`
 
 Push to an IPNS remote:
 
 * `ipfs key gen --type=rsa --size=2048 mysite`
 * `git remote add ipns ipns::key:mysite`
 * `git push ipns`
+* `git pull`
 
 ## Generated File Structure
 
 * `/`: the contents of the branch that was pushed
-* `.git/vfs/commits/`: all the trees linked by commit message and sorted by date
+* `.git/vfs/messages/`: all the trees linked by commit message and sorted by date
 * `.git/vfs/authors/#{name}/`: commits sorted by author
-* `.git/vfs/rev/commits/`, `.git/vfs/rev/authors/#{name}/`: the commits as before, but prefaced with a count to reverse the order
+* `.git/vfs/rev/messages/`, `.git/vfs/rev/authors/#{name}/`: the commits as before, but prefaced with a count to reverse the order
+* `.git/vfs/commits/`: vfs commits named by commit SHA1
+* `.git/vfs/trees/`: content trees named by tree SHA1
+* `.git/vfs/HEAD`: root vfs commit
 * `.git/blobs/`, `.git/trees/`, `.git/commits/`, `.git/tags/`: various Git objects stored by their SHA1 hash as filename
 * `.git/refs/heads/*`: files containing the root hash of various Git branches
 * `.git/HEAD`: the name of the branch contained in this repo

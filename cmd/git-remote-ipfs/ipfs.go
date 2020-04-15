@@ -30,13 +30,18 @@ type refPath struct {
 	hash string
 }
 
+type hashPair struct {
+	hash string
+	cid  string
+}
+
 type IPFSHandler struct {
 	api *ipfs.Shell
 
 	remoteName  string
 	currentHash string
 
-	largeObjs map[string]string
+	trees map[string]string
 
 	log *log.Logger
 
@@ -47,6 +52,7 @@ func (h *IPFSHandler) Initialize(remote *core.Remote) error {
 	h.api = ipfs.NewLocalShell()
 	h.currentHash = h.remoteName
 	h.log = log.New(os.Stderr, "\x1b[32mhandler:\x1b[39m ", 0)
+	h.trees = make(map[string]string)
 	return nil
 }
 
@@ -55,6 +61,8 @@ func (h *IPFSHandler) Finish(remote *core.Remote) error {
 		if !strings.HasPrefix(h.remoteName, "key:") {
 			remote.Log.Printf("Pushed to IPFS as \x1b[32mipfs://%s\x1b[39m\n", h.currentHash)
 		} else {
+			h.api.Pin(h.currentHash)
+
 			key := h.remoteName[4:]
 			cmd := exec.Command("ipfs", "name", "publish", "--key=" + key, h.currentHash)
 
@@ -158,8 +166,7 @@ func (h *IPFSHandler) Push(remote *core.Remote, local string, remoteRef string) 
 
 	h.currentHash, err = h.api.PatchLink(c, ".git", gitRef, true)
 
-	exe, _ := os.Executable()
-	if os.Getenv("GIT_IPFS_VFS") != "" || exe[(len(exe) - 5):] != "-ipfs" {
+	if os.Getenv("GIT_IPFS_KVFS") == "" {
 		depth := 0
 		object.NewCommitPreorderIter(commit, nil, nil).ForEach(func(commit *object.Commit) error {
 			c, _ := h.cidForCommit(commit, remote)
@@ -167,6 +174,15 @@ func (h *IPFSHandler) Push(remote *core.Remote, local string, remoteRef string) 
 			_, err := h.placeCommitCID(commit, c, depth)
 			return err
 		})
+
+		h.log.Println()
+
+		c, err = h.commitTree(commit, remote.Tracker)
+		h.log.Println()
+		if err != nil {
+			return "", fmt.Errorf("push: %v", err)
+		}
+		h.currentHash, err = h.api.PatchLink(h.currentHash, ".git/vfs/HEAD", c, true)
 	}
 	h.log.Println()
 
@@ -197,6 +213,40 @@ func (h *IPFSHandler) fileSafeName(name string) string {
 	return strings.ReplaceAll(name, "/", "%2F")
 }
 
+func (h *IPFSHandler) commitTree(commit *object.Commit, tracker *core.Tracker) (string, error) {
+	h.log.Printf("Linking Commit: %s\r\x1b[A", commit.Hash.String())
+
+	var pairs []hashPair
+	commit.Parents().ForEach(func (parent *object.Commit) error {
+		hash := parent.Hash.String()
+		cid, err := h.commitTree(parent, tracker)
+		if err != nil { return err }
+		pairs = append(pairs, hashPair{hash, cid})
+		h.currentHash, err = h.api.PatchLink(h.currentHash, ".git/vfs/commits/" + hash, cid, true)
+		if err != nil { return err }
+		return nil
+	})
+
+	out := "QmUNLLsPACCz1vLxQVkXqqLX5R1X345qqfHbsf67hvA3Nn"
+	err := error(nil)
+	for _, pair := range pairs {
+		out, err = h.api.PatchLink(out, "parents/" + pair.hash, pair.cid, true)
+		if err != nil { return "", err }
+	}
+
+	tree, err := commit.Tree()
+	if err != nil { return "", err }
+	out, err = h.api.PatchLink(out, "tree", h.trees[tree.Hash.String()], true)
+	if err != nil { return "", err }
+
+	obj, err := tracker.Entry(commit.Hash.String())
+	if err != nil { return "", err }
+	out, err = h.api.PatchLink(out, "object", obj, true)
+	if err != nil { return "", err }
+
+	return out, nil
+}
+
 func (h *IPFSHandler) placeCommitCID(commit *object.Commit, c string, commitNum int) (string, error) {
 	// Pretty much the only disallowed character is / which will create a subdirectory
 	// %s are encoded so strings can be reliably percent decoded
@@ -205,8 +255,8 @@ func (h *IPFSHandler) placeCommitCID(commit *object.Commit, c string, commitNum 
 	entry := h.fileSafeName(fmt.Sprintf("%s: %s – %s", when, commit.Author.Name, message))
 
 	h.log.Printf("Adding: %s → %s\r\x1b[A", entry, c)
-	h.currentHash, _ = h.api.PatchLink(h.currentHash, ".git/vfs/commits/" + entry, c, true)
-	h.currentHash, _ = h.api.PatchLink(h.currentHash, fmt.Sprintf(".git/vfs/rev/commits/%020d: %s", commitNum, entry), c, true)
+	h.currentHash, _ = h.api.PatchLink(h.currentHash, ".git/vfs/messages/" + entry, c, true)
+	h.currentHash, _ = h.api.PatchLink(h.currentHash, fmt.Sprintf(".git/vfs/rev/messages/%020d: %s", commitNum, entry), c, true)
 
 	entry = h.fileSafeName(fmt.Sprintf("%s: %s", when, message))
 	name := h.fileSafeName(commit.Author.Name)
@@ -233,6 +283,7 @@ func (h *IPFSHandler) cidForCommit(commit *object.Commit, remote *core.Remote) (
 			remote.Log.Println("Couldn't Find Blob: ", leaf.Hash)
 		}
 	}
+	h.trees[tree.Hash.String()] = c
 	return c, nil
 }
 
