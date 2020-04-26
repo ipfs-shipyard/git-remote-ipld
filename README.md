@@ -3,10 +3,8 @@
 Push and fetch commits to IPFS with a published version of the contents.
 
 ## Installation
-1. `go install github.com/dhappy/git-remote-ipfs`
-2. `cd git-remote-ipfs`
-3. `make`
-4. `sudo cp cmd/git-remote-ipfs/git-remote-* /usr/lib/git-core/`
+1. `go get -v github.com/dhappy/git-remote-ipfs/cmd/git-remote-ipfs/...`
+2. `cp --no-dereference "$GOPATH/src/github.com/dhappy/git-remote-ipfs/cmd/git-remote-ipfs/git-remote-ipns" "$GOBIN"`
 
 ## Usage
 
