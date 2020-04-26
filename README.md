@@ -3,7 +3,7 @@
 Push and fetch commits to IPFS with a published version of the contents.
 
 ## Installation
-1. `git clone https://github.com/ipfs-shipyard/git-remote-ipfs.git`
+1. `go install github.com/dhappy/git-remote-ipfs`
 2. `cd git-remote-ipfs`
 3. `make`
 4. `sudo cp cmd/git-remote-ipfs/git-remote-* /usr/lib/git-core/`
@@ -22,9 +22,9 @@ Pull a commit:
 
 `git pull ipfs://Qma5iwyvJqxzHqCT9aqyc7dxZXXGoDeSUyPYFqkCWGJw92`
 
-Push without the `/vfs` directory (this takes about half as long, but might make your repository incompatible with tools that don't want to parse the commit tree):
+Push with the `/vfs` directory:
 
-`GIT_IPFS_KVFS=t git push ipfs:: master`
+`GIT_IPFS_VFS=t git push ipfs::`
 
 Push to an IPNS remote:
 
@@ -36,15 +36,18 @@ Push to an IPNS remote:
 ## Generated File Structure
 
 * `/`: the contents of the branch that was pushed
+* `.git/blobs/`, `.git/trees/`, `.git/commits/`, `.git/tags/`: various Git objects stored by their SHA1 hash as filename
+* `.git/refs/heads/*`: files containing the root hash of various Git branches
+* `.git/HEAD`: the name of the branch contained in this repo
+
+The virtual filesystem makes all the trees associated with all the commits available, but takes about twice as long to generate:
+
 * `.git/vfs/messages/`: all the trees linked by commit message and sorted by date
 * `.git/vfs/authors/#{name}/`: commits sorted by author
 * `.git/vfs/rev/messages/`, `.git/vfs/rev/authors/#{name}/`: the commits as before, but prefaced with a count to reverse the order
 * `.git/vfs/commits/`: vfs commits named by commit SHA1
 * `.git/vfs/trees/`: content trees named by tree SHA1
 * `.git/vfs/HEAD`: root vfs commit
-* `.git/blobs/`, `.git/trees/`, `.git/commits/`, `.git/tags/`: various Git objects stored by their SHA1 hash as filename
-* `.git/refs/heads/*`: files containing the root hash of various Git branches
-* `.git/HEAD`: the name of the branch contained in this repo
 
 ## Overview
 

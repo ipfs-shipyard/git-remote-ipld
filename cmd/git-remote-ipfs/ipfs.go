@@ -172,7 +172,7 @@ func (h *IPFSHandler) Push(remote *core.Remote, local string, remoteRef string) 
 
 	h.currentHash, err = h.api.PatchLink(c, ".git", gitRef, true)
 
-	if os.Getenv("GIT_IPFS_KVFS") == "" {
+	if os.Getenv("GIT_IPFS_VFS") != "" {
 		depth := 0
 		object.NewCommitPreorderIter(commit, nil, nil).ForEach(func(commit *object.Commit) error {
 			c, _ := h.cidForCommit(commit, remote)
