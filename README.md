@@ -6,6 +6,8 @@ Push and fetch commits to IPFS with a published version of the contents.
 1. `go get -v github.com/dhappy/git-remote-ipfs/cmd/git-remote-ipfs/...`
 2. `cp --no-dereference "$GOPATH/src/github.com/dhappy/git-remote-ipfs/cmd/git-remote-ipfs/git-remote-ipns" "$GOBIN"`
 
+#2 assumes the environment variables `$GOPATH` and `$GOBIN` are defined and `$GOBIN` is in your `$PATH`.
+
 ## Usage
 
 Push:
@@ -20,7 +22,7 @@ Pull a commit:
 
 `git pull ipfs://Qma5iwyvJqxzHqCT9aqyc7dxZXXGoDeSUyPYFqkCWGJw92`
 
-Push with the `/vfs` directory:
+Push with the `.git/vfs/` directory:
 
 `GIT_IPFS_VFS=t git push ipfs::`
 
@@ -63,7 +65,7 @@ Integrating Git and IPFS has been on ongoing work with several solutions over th
 
 The SHA1 keys used by Git aren't exactly the hash of the object. Each serialized form is prefaced with a header of the format `"#{type} #{size}\x00". So a Blob in Git is this header plus the file contents.
 
-Because this system stores the raw Git blocks, the file data is fully present, but unreadable because of the header.
+Because the IPLD remote stores the raw Git blocks, the file data is fully present, but unreadable because of the header.
 
 There were also technical issues because the contents of a `block put` aren't sharded and there are reliability problems with large blocks.
 
@@ -75,6 +77,9 @@ When fetching, a map is created between the SHA1 keys and their CID along with t
 * `fetch: manifest has unsupported version: x (we support y)` on any command
   - This usually means that cache tracker data format has changed
   - Remove the cache with: `rm -rf .git/remote-ipfs`
+
+* `panic: runtime error: invalid memory address or nil pointer dereference`
+  - This dramatic message likely means the IPFS server isn't running.
 
 # License
 MIT

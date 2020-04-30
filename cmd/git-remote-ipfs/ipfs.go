@@ -3,13 +3,13 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"path"
-	"strings"
 	"log"
 	"os"
-	"time"
 	"os/exec"
+	"path"
 	"regexp"
+	"strings"
+	"time"
 
 	core "github.com/dhappy/git-remote-ipfs/core"
 	ipfs "github.com/ipfs/go-ipfs-api"
@@ -94,10 +94,14 @@ func (h *IPFSHandler) List(remote *core.Remote, forPush bool) ([]string, error) 
 		if strings.HasPrefix(h.remoteName, "key:") {
 			cmd := exec.Command("ipfs", "key", "list", "-l")
 
-			var out bytes.Buffer; cmd.Stdout = &out; cmd.Stderr = &out
+			var out bytes.Buffer
+			cmd.Stdout = &out
+			cmd.Stderr = &out
 
 			err := cmd.Run()
-			if err != nil { return nil, err }
+			if err != nil {
+				return nil, err
+			}
 
 			key := h.remoteName[4:]
 			re := regexp.MustCompile(`\s(.+)\s+` + key)
@@ -105,11 +109,15 @@ func (h *IPFSHandler) List(remote *core.Remote, forPush bool) ([]string, error) 
 
 			cmd = exec.Command("ipfs", "name", "resolve", cid)
 
-			var out2 bytes.Buffer; cmd.Stdout = &out2; cmd.Stderr = &out2
+			var out2 bytes.Buffer
+			cmd.Stdout = &out2
+			cmd.Stderr = &out2
 
 			h.log.Printf("IPNS Resolving \x1b[35m%s\x1b[39m:", cid)
 			err = cmd.Run()
-			if err != nil { return nil, err }
+			if err != nil {
+				return nil, err
+			}
 
 			re = regexp.MustCompile(`/ipfs/(.+)`)
 			h.remoteName = re.FindStringSubmatch(out2.String())[1]
@@ -154,8 +162,13 @@ func (h *IPFSHandler) Push(remote *core.Remote, local string, remoteRef string) 
 	}
 
 	root := localRef.Hash()
+	vfs := os.Getenv("GIT_IPFS_VFS") != ""
 
-	cached, err := remote.Tracker.Entry("repo:" + root.String())
+	key := "repo:" + root.String()
+	if vfs {
+		key = "vfs:" + key
+	}
+	cached, err := remote.Tracker.Entry(key)
 	if cached != "" {
 		h.currentHash = cached
 		return local, nil
@@ -172,7 +185,7 @@ func (h *IPFSHandler) Push(remote *core.Remote, local string, remoteRef string) 
 
 	h.currentHash, err = h.api.PatchLink(c, ".git", gitRef, true)
 
-	if os.Getenv("GIT_IPFS_VFS") != "" {
+	if vfs {
 		depth := 0
 		object.NewCommitPreorderIter(commit, nil, nil).ForEach(func(commit *object.Commit) error {
 			c, _ := h.cidForCommit(commit, remote)
@@ -210,7 +223,7 @@ func (h *IPFSHandler) Push(remote *core.Remote, local string, remoteRef string) 
 		return "", fmt.Errorf("push: %v", err)
 	}
 
-	remote.Tracker.AddEntry("repo:" + root.String(), h.currentHash)
+	remote.Tracker.AddEntry(key, h.currentHash)
 
 	return local, nil
 }
@@ -225,32 +238,46 @@ func (h *IPFSHandler) commitTree(commit *object.Commit, tracker *core.Tracker) (
 	h.log.Printf("Linking Commit: %s\r\x1b[A", commit.Hash.String())
 
 	var pairs []hashPair
-	commit.Parents().ForEach(func (parent *object.Commit) error {
+	commit.Parents().ForEach(func(parent *object.Commit) error {
 		hash := parent.Hash.String()
 		cid, err := h.commitTree(parent, tracker)
-		if err != nil { return err }
+		if err != nil {
+			return err
+		}
 		pairs = append(pairs, hashPair{hash, cid})
-		h.currentHash, err = h.api.PatchLink(h.currentHash, ".git/vfs/commits/" + hash, cid, true)
-		if err != nil { return err }
+		h.currentHash, err = h.api.PatchLink(h.currentHash, ".git/vfs/commits/"+hash, cid, true)
+		if err != nil {
+			return err
+		}
 		return nil
 	})
 
 	out := "QmUNLLsPACCz1vLxQVkXqqLX5R1X345qqfHbsf67hvA3Nn"
 	err := error(nil)
 	for _, pair := range pairs {
-		out, err = h.api.PatchLink(out, "parents/" + pair.hash, pair.cid, true)
-		if err != nil { return "", err }
+		out, err = h.api.PatchLink(out, "parents/"+pair.hash, pair.cid, true)
+		if err != nil {
+			return "", err
+		}
 	}
 
 	tree, err := commit.Tree()
-	if err != nil { return "", err }
+	if err != nil {
+		return "", err
+	}
 	out, err = h.api.PatchLink(out, "tree", h.trees[tree.Hash.String()], true)
-	if err != nil { return "", err }
+	if err != nil {
+		return "", err
+	}
 
 	obj, err := tracker.Entry(commit.Hash.String())
-	if err != nil { return "", err }
+	if err != nil {
+		return "", err
+	}
 	out, err = h.api.PatchLink(out, "object", obj, true)
-	if err != nil { return "", err }
+	if err != nil {
+		return "", err
+	}
 
 	return out, nil
 }
@@ -263,7 +290,7 @@ func (h *IPFSHandler) placeCommitCID(commit *object.Commit, c string, commitNum 
 	entry := h.fileSafeName(fmt.Sprintf("%s: %s – %s", when, commit.Author.Name, message))
 
 	h.log.Printf("Adding: %s → %s\r\x1b[A", entry, c)
-	h.currentHash, _ = h.api.PatchLink(h.currentHash, ".git/vfs/messages/" + entry, c, true)
+	h.currentHash, _ = h.api.PatchLink(h.currentHash, ".git/vfs/messages/"+entry, c, true)
 	h.currentHash, _ = h.api.PatchLink(h.currentHash, fmt.Sprintf(".git/vfs/rev/messages/%020d: %s", commitNum, entry), c, true)
 
 	entry = h.fileSafeName(fmt.Sprintf("%s: %s", when, message))
@@ -320,5 +347,5 @@ func (h *IPFSHandler) getRef(name string) (string, error) {
 
 func isNoLink(err error) bool {
 	return strings.Contains(err.Error(), "no link named") || strings.Contains(err.Error(),
-"no link by that name")
+		"no link by that name")
 }

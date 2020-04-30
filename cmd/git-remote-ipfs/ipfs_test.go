@@ -17,7 +17,7 @@ func TestCapabilities(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 
 	// git clone ipfs://QmRwmeigXNtXnrR18qGUxLmdXJBXCBZw311vqczeTfcgwz
-	args := []string{"git-remote-ipld", "origin", "ipfs://QmRwmeigXNtXnrR18qGUxLmdXJBXCBZw311vqczeTfcgwz"}
+	args := []string{"git-remote-ipfs", "origin", "ipfs://QmRwmeigXNtXnrR18qGUxLmdXJBXCBZw311vqczeTfcgwz"}
 
 	listExp := []string{
 		"@refs/heads/master HEAD",

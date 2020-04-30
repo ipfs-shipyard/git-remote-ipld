@@ -10,12 +10,12 @@ import (
 	"os"
 	"os/signal"
 
+	git "github.com/go-git/go-git/v5"
+	plumbing "github.com/go-git/go-git/v5/plumbing"
 	ipfs "github.com/ipfs/go-ipfs-api"
 	ipldgit "github.com/ipfs/go-ipld-git"
 	mh "github.com/multiformats/go-multihash"
 	sizedwaitgroup "github.com/remeh/sizedwaitgroup"
-	git "github.com/go-git/go-git/v5"
-	plumbing "github.com/go-git/go-git/v5/plumbing"
 )
 
 type Push struct {
@@ -31,7 +31,7 @@ type Push struct {
 	shuntHash string
 	shunts    map[string]string
 
-	seen       map[string]bool
+	seen map[string]bool
 
 	errCh chan error
 	wg    sizedwaitgroup.SizedWaitGroup
@@ -39,17 +39,17 @@ type Push struct {
 
 func NewPush(gitDir string, tracker *Tracker, repo *git.Repository) *Push {
 	return &Push{
-		gitDir:    gitDir,
+		gitDir: gitDir,
 
-		todo:    list.New(),
-		log:     log.New(os.Stderr, "\x1b[33mpush:\x1b[39m ", 0),
-		tracker: tracker,
-		repo:    repo,
-		todoc:   1,
-		shunts:   make(map[string]string),
+		todo:      list.New(),
+		log:       log.New(os.Stderr, "\x1b[33mpush:\x1b[39m ", 0),
+		tracker:   tracker,
+		repo:      repo,
+		todoc:     1,
+		shunts:    make(map[string]string),
 		shuntHash: "QmUNLLsPACCz1vLxQVkXqqLX5R1X345qqfHbsf67hvA3Nn",
 
-		seen:       make(map[string]bool),
+		seen: make(map[string]bool),
 
 		wg:    sizedwaitgroup.New(512),
 		errCh: make(chan error),
@@ -115,6 +115,7 @@ func (p *Push) doWork(remote *Remote) (string, error) {
 				return "", fmt.Errorf("push: %v", err)
 			}
 
+			// panics and dies if API server isn't running
 			entry, err = api.Add(rawReader)
 			if err != nil {
 				return "", fmt.Errorf("push: %v", err)
@@ -197,5 +198,3 @@ func (p *Push) processLinks(object []byte) (int, error) {
 	}
 	return n, nil
 }
-
-
