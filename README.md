@@ -63,7 +63,7 @@ The helper traverses the tree and parents of the root Commit and stores them all
 
 Integrating Git and IPFS has been on ongoing work with several solutions over the years. The predecessor to this one used `ipfs block put` to store the Commit tree using SHA1. Fetching converts the SHA1 keys in the raw git blocks to IPFS content ids and retrieves them directly.
 
-The SHA1 keys used by Git aren't exactly the hash of the object. Each serialized form is prefaced with a header of the format `"#{type} #{size}\x00". So a Blob in Git is this header plus the file contents.
+The SHA1 keys used by Git aren't exactly the hash of the object. Each serialized form is prefaced with a header of the format: "`#{type} #{size}\x00`". So a Blob in Git is this header plus the file contents.
 
 Because the IPLD remote stores the raw Git blocks, the file data is fully present, but unreadable because of the header.
 
