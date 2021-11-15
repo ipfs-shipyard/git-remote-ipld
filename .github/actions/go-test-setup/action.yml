@@ -1,0 +1,30 @@
+name: setup-go-ipfs
+description: install and setup go-ipfs as needed for testing
+
+runs:
+  using: "composite"
+  steps:
+    - name: Install go-ipfs
+      shell: bash
+      run: (cd /tmp && go install github.com/ipfs/go-ipfs/cmd/ipfs@v0.9.1)
+    - name: Initialize go-ipfs
+      shell: bash
+      run: (ipfs init)
+    - name: Run go-ipfs
+      shell: bash
+      run: (ipfs daemon &)
+    - name: Wait for go-ipfs to be ready
+      shell: bash
+      run: |
+        for ($i = 0; $i -lt 10; $i++) {
+          $addrs = ipfs id | jq .Addresses;
+          if ($addrs -eq "null") {
+            sleep 1
+          } else {
+            echo "Successfully started the daemon"
+            exit 0
+          }
+        }
+    - name: Connect to peer with test data
+      shell: bash
+      run: curl -X POST 'http://127.0.0.1:5001/api/v0/swarm/connect?arg=/ip4/94.130.135.167/tcp/4002/ws/ipfs/QmUEMvxS2e7iDrereVYc5SWPauXPyNwxcy9BXZrC1QTcHE'
