@@ -19,7 +19,7 @@ const (
 
 func Main(args []string, reader io.Reader, writer io.Writer, logger *log.Logger) error {
 	if len(args) < 3 {
-		return fmt.Errorf("Usage: git-remote-ipns remote-name url")
+		return fmt.Errorf("usage: git-remote-ipns remote-name url")
 	}
 
 	remoteName := args[2]
