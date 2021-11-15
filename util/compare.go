@@ -52,18 +52,18 @@ func CompareDirs(srcPath, dstPath string, ignore []string) error {
 	for i := 0; float64(i) < math.Max(float64(len(srcEntries)), float64(len(dstEntries))); i++ {
 		if i >= len(srcEntries) {
 			dstSubPath := filepath.Join(dstPath, dstEntries[i].Name())
-			return fmt.Errorf("File %s in destination directory does not exist in source directory %s", dstSubPath, srcPath)
+			return fmt.Errorf("file %s in destination directory does not exist in source directory %s", dstSubPath, srcPath)
 		}
 		if i >= len(dstEntries) {
 			srcSubPath := filepath.Join(srcPath, srcEntries[i].Name())
-			return fmt.Errorf("File %s in source directory does not exist in destination directory %s", srcSubPath, dstPath)
+			return fmt.Errorf("file %s in source directory does not exist in destination directory %s", srcSubPath, dstPath)
 		}
 		if srcEntries[i].Name() < dstEntries[i].Name() {
 			srcSubPath := filepath.Join(srcPath, srcEntries[i].Name())
-			return fmt.Errorf("File %s in source directory does not exist in destination directory %s", srcSubPath, dstPath)
+			return fmt.Errorf("file %s in source directory does not exist in destination directory %s", srcSubPath, dstPath)
 		} else if srcEntries[i].Name() > dstEntries[i].Name() {
 			dstSubPath := filepath.Join(dstPath, dstEntries[i].Name())
-			return fmt.Errorf("File %s in destination directory does not exist in source directory %s", dstSubPath, srcPath)
+			return fmt.Errorf("file %s in destination directory does not exist in source directory %s", dstSubPath, srcPath)
 		}
 	}
 
@@ -159,14 +159,14 @@ func CompareZlib(file1, file2 string) error {
 			if err1 == io.EOF && err2 == io.EOF {
 				return nil
 			} else if err1 == io.EOF || err2 == io.EOF {
-				return fmt.Errorf("File %s != %s", file1, file2)
+				return fmt.Errorf("file %s != %s", file1, file2)
 			} else {
 				return err1
 			}
 		}
 
 		if !bytes.Equal(b1, b2) {
-			return fmt.Errorf("File %s != %s", file1, file2)
+			return fmt.Errorf("file %s != %s", file1, file2)
 		}
 	}
 }
