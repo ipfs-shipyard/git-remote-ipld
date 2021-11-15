@@ -19,6 +19,7 @@ const (
 
 func Main(args []string, reader io.Reader, writer io.Writer, logger *log.Logger) error {
 	if len(args) < 3 {
+		//lint:ignore ST1005 user facing message
 		return fmt.Errorf("Usage: git-remote-ipns remote-name url")
 	}
 
