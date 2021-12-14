@@ -1,8 +1,10 @@
+//go:build !windows || !386
+// +build !windows !386
+
 package main
 
 import (
 	"bytes"
-	"github.com/ipfs-shipyard/git-remote-ipld/util"
 	"io"
 	"io/ioutil"
 	"log"
@@ -10,6 +12,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/ipfs-shipyard/git-remote-ipld/util"
 )
 
 func TestCapabilities(t *testing.T) {
