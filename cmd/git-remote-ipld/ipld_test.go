@@ -1,8 +1,13 @@
+//go:build !windows || !386
+// +build !windows !386
+
+// TestCapabilities fails on win32 machines because badger exits with:
+//  The process cannot access the file because it is being used by another process.
+
 package main
 
 import (
 	"bytes"
-	"github.com/ipfs-shipyard/git-remote-ipld/util"
 	"io"
 	"io/ioutil"
 	"log"
@@ -10,6 +15,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/ipfs-shipyard/git-remote-ipld/util"
 )
 
 func TestCapabilities(t *testing.T) {

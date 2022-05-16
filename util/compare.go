@@ -94,11 +94,13 @@ func CompareFiles(file1, file2 string) error {
 	if err != nil {
 		return err
 	}
+	defer f1.Close()
 
 	f2, err := os.Open(file2)
 	if err != nil {
 		return err
 	}
+	defer f2.Close()
 
 	for {
 		b1 := make([]byte, chunkSize)
@@ -132,21 +134,25 @@ func CompareZlib(file1, file2 string) error {
 	if err != nil {
 		return err
 	}
+	defer z1.Close()
 
 	z2, err := os.Open(file2)
 	if err != nil {
 		return err
 	}
+	defer z2.Close()
 
 	f1, err := zlib.NewReader(z1)
 	if err != nil {
 		return err
 	}
+	defer f1.Close()
 
 	f2, err := zlib.NewReader(z2)
 	if err != nil {
 		return err
 	}
+	defer f2.Close()
 
 	for {
 		b1 := make([]byte, chunkSize)
