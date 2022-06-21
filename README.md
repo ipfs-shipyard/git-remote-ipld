@@ -32,8 +32,6 @@ quite usable. IPNS helper is WIP and doesn't yet do what it should
 * `fetch: manifest has unsupported version: 2 (we support 3)` on any command
   - This usually means that tracker data format has changed
   - Simply do `rm -rf .git/ipld`
-* `command [...] EOF` or `[...] no parser for format "git" using input type "raw"`
-  - You don't have git IPFS plugin properly installed, see step 5 of installation.
 
 ## License
 MIT
