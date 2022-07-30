@@ -5,11 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"path"
 	"strings"
 
-	core "github.com/ipfs-shipyard/git-remote-ipld/core"
 	ipfs "github.com/ipfs/go-ipfs-api"
+
+	"github.com/ipfs-shipyard/git-remote-ipld/core"
 
 	"github.com/ipfs/go-cid"
 	"gopkg.in/src-d/go-git.v4/plumbing"
@@ -44,7 +46,7 @@ type IpnsHandler struct {
 }
 
 func (h *IpnsHandler) Initialize(remote *core.Remote) error {
-	h.api = ipfs.NewLocalShell()
+	h.api = ipfs.NewShell(os.Getenv(ipfs.EnvDir))
 	h.currentHash = h.remoteName
 	return nil
 }

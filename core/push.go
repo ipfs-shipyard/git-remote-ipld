@@ -11,13 +11,13 @@ import (
 	"os/signal"
 	"path"
 
-	cid "github.com/ipfs/go-cid"
+	"github.com/ipfs/go-cid"
 	ipfs "github.com/ipfs/go-ipfs-api"
 	ipldgit "github.com/ipfs/go-ipld-git"
 	mh "github.com/multiformats/go-multihash"
-	sizedwaitgroup "github.com/remeh/sizedwaitgroup"
-	git "gopkg.in/src-d/go-git.v4"
-	plumbing "gopkg.in/src-d/go-git.v4/plumbing"
+	"github.com/remeh/sizedwaitgroup"
+	"gopkg.in/src-d/go-git.v4"
+	"gopkg.in/src-d/go-git.v4/plumbing"
 )
 
 type Push struct {
@@ -67,7 +67,7 @@ func (p *Push) PushHash(hash string) error {
 func (p *Push) doWork() error {
 	defer p.wg.Wait()
 
-	api := ipfs.NewLocalShell()
+	api := ipfs.NewShell(os.Getenv(ipfs.EnvDir))
 
 	intch := make(chan os.Signal, 1)
 	signal.Notify(intch, os.Interrupt)
