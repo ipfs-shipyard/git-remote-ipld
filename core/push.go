@@ -5,7 +5,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"os"
 	"os/signal"
@@ -124,7 +124,7 @@ func (p *Push) doWork() error {
 			return fmt.Errorf("push: %v", err)
 		}
 
-		raw, err := ioutil.ReadAll(rawReader)
+		raw, err := io.ReadAll(rawReader)
 		if err != nil {
 			return fmt.Errorf("push: %v", err)
 		}
