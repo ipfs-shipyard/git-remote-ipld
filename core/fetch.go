@@ -4,7 +4,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"path"
@@ -12,7 +11,7 @@ import (
 
 	"github.com/ipfs/go-cid"
 	ipfs "github.com/ipfs/go-ipfs-api"
-	"github.com/ipfs/go-ipld-git"
+	ipldgit "github.com/ipfs/go-ipld-git"
 	mh "github.com/multiformats/go-multihash"
 	"github.com/remeh/sizedwaitgroup"
 )
@@ -154,7 +153,7 @@ func (f *Fetch) processSingle(hash string) error {
 
 		/////////////////
 
-		err = ioutil.WriteFile(*objectPath, object, 0444)
+		err = os.WriteFile(*objectPath, object, 0444)
 		if err != nil {
 			f.errCh <- fmt.Errorf("fetch: %v", err)
 			return
