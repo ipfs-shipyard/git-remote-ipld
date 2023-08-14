@@ -1,6 +1,6 @@
 module github.com/ipfs-shipyard/git-remote-ipld
 
-go 1.19
+go 1.20
 
 require (
 	github.com/dgraph-io/badger v1.6.2
