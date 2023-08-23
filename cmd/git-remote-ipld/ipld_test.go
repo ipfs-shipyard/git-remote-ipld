@@ -1,5 +1,4 @@
 //go:build !windows || !386
-// +build !windows !386
 
 // TestCapabilities fails on win32 machines because badger exits with:
 //  The process cannot access the file because it is being used by another process.
