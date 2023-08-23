@@ -8,7 +8,6 @@ package main
 import (
 	"bytes"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -88,7 +87,7 @@ func setupTest(t *testing.T) string {
 		t.Fatal("source is not a directory")
 	}
 
-	tmpdir, err := ioutil.TempDir("", "git-test")
+	tmpdir, err := os.MkdirTemp("", "git-test")
 	if err != nil {
 		t.Fatal(err)
 	}
