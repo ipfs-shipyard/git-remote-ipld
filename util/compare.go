@@ -34,13 +34,29 @@ func CompareDirs(srcPath, dstPath string, ignore []string) error {
 		return a[:len(a)-count]
 	}
 
-	srcEntries, err := os.ReadDir(srcPath)
+	srcDirEntries, err := os.ReadDir(srcPath)
 	if err != nil {
 		return err
 	}
-	dstEntries, err := os.ReadDir(dstPath)
+	dstDirEntries, err := os.ReadDir(dstPath)
 	if err != nil {
 		return err
+	}
+	srcEntries := make([]os.FileInfo, 0, len(srcDirEntries))
+	dstEntries := make([]os.FileInfo, 0, len(dstDirEntries))
+	for i, entry := range srcDirEntries {
+		info, err := entry.Info()
+		if err != nil {
+			return err
+		}
+		srcEntries[i] = info
+	}
+	for i, entry := range dstDirEntries {
+		info, err := entry.Info()
+		if err != nil {
+			return err
+		}
+		dstEntries[i] = info
 	}
 
 	srcEntries = filterEntries(srcEntries)
