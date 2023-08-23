@@ -101,9 +101,17 @@ func CopyDir(src string, dst string) (err error) {
 		return
 	}
 
-	entries, err := os.ReadDir(src)
+	dirEntries, err := os.ReadDir(src)
 	if err != nil {
 		return
+	}
+	entries := make([]os.FileInfo, 0, len(dirEntries))
+	for i, entry := range dirEntries {
+		info, err := entry.Info()
+		if err != nil {
+			return err
+		}
+		entries[i] = info
 	}
 
 	for _, entry := range entries {
