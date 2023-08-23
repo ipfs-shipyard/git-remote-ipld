@@ -5,7 +5,6 @@ import (
 	"compress/zlib"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math"
 	"os"
 	"path/filepath"
@@ -35,11 +34,11 @@ func CompareDirs(srcPath, dstPath string, ignore []string) error {
 		return a[:len(a)-count]
 	}
 
-	srcEntries, err := ioutil.ReadDir(srcPath)
+	srcEntries, err := os.ReadDir(srcPath)
 	if err != nil {
 		return err
 	}
-	dstEntries, err := ioutil.ReadDir(dstPath)
+	dstEntries, err := os.ReadDir(dstPath)
 	if err != nil {
 		return err
 	}
