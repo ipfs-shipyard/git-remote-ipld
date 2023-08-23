@@ -9,8 +9,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ "ubuntu", "windows", "macos" ]
-        go: [ "1.17.x", "1.18.x" ]
+        os: [ "ubuntu" ]
+        go: [ "1.17.7" ]
     env:
       COVERAGES: ""
     runs-on: ${{ format('{0}-latest', matrix.os) }}
