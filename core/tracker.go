@@ -8,7 +8,7 @@ import (
 	"github.com/dgraph-io/badger"
 )
 
-//Tracker tracks which hashes are published in IPLD
+// Tracker tracks which hashes are published in IPLD
 type Tracker struct {
 	db *badger.DB
 
