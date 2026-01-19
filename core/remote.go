@@ -29,6 +29,8 @@ type Remote struct {
 	Logger   *log.Logger
 	localDir string
 
+	apiURL string
+
 	Repo    *git.Repository
 	Tracker *Tracker
 
@@ -37,7 +39,7 @@ type Remote struct {
 	todo []func() (string, error)
 }
 
-func NewRemote(handler RemoteHandler, reader io.Reader, writer io.Writer, logger *log.Logger) (*Remote, error) {
+func NewRemote(handler RemoteHandler, reader io.Reader, writer io.Writer, logger *log.Logger, apiURL string) (*Remote, error) {
 	localDir, err := GetLocalDir()
 	if err != nil {
 		return nil, err
@@ -87,11 +89,11 @@ func (r *Remote) Printf(format string, a ...interface{}) (n int, err error) {
 }
 
 func (r *Remote) NewPush() *Push {
-	return NewPush(r.localDir, r.Tracker, r.Repo)
+	return NewPush(r.localDir, r.Tracker, r.Repo, r.apiURL)
 }
 
 func (r *Remote) NewFetch() *Fetch {
-	return NewFetch(r.localDir, r.Tracker, r.Handler.ProvideBlock)
+	return NewFetch(r.localDir, r.Tracker, r.Handler.ProvideBlock, r.apiURL)
 }
 
 func (r *Remote) Close() error {

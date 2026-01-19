@@ -35,6 +35,7 @@ type refPath struct {
 type IpnsHandler struct {
 	api *ipfs.Shell
 
+	apiURL      string
 	remoteName  string
 	currentHash string
 
@@ -44,7 +45,11 @@ type IpnsHandler struct {
 }
 
 func (h *IpnsHandler) Initialize(remote *core.Remote) error {
-	h.api = ipfs.NewLocalShell()
+	if len(h.apiURL) == 0 {
+		h.api = ipfs.NewLocalShell()
+	} else {
+		h.api = ipfs.NewShell(h.apiURL)
+	}
 	h.currentHash = h.remoteName
 	return nil
 }
