@@ -48,9 +48,9 @@ require (
 	github.com/src-d/gcfg v1.4.0 // indirect
 	github.com/whyrusleeping/tar-utils v0.0.0-20180509141711-8c6c8ba81d5c // indirect
 	github.com/xanzy/ssh-agent v0.2.0 // indirect
-	golang.org/x/crypto v0.1.0 // indirect
-	golang.org/x/net v0.7.0 // indirect
-	golang.org/x/sys v0.5.0 // indirect
+	golang.org/x/crypto v0.17.0 // indirect
+	golang.org/x/net v0.10.0 // indirect
+	golang.org/x/sys v0.15.0 // indirect
 	gopkg.in/src-d/go-billy.v4 v4.2.1 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 )
