@@ -42,7 +42,13 @@ type Fetch struct {
 	api      *ipfs.Shell
 }
 
-func NewFetch(gitDir string, tracker *Tracker, provider ObjectProvider) *Fetch {
+func NewFetch(gitDir string, tracker *Tracker, provider ObjectProvider, apiURL string) *Fetch {
+	var api *ipfs.Shell
+	if len(apiURL) == 0 {
+		api = ipfs.NewLocalShell()
+	} else {
+		api = ipfs.NewShell(apiURL)
+	}
 	return &Fetch{
 		objectDir: path.Join(gitDir, "objects"),
 		gitDir:    gitDir,
@@ -60,7 +66,7 @@ func NewFetch(gitDir string, tracker *Tracker, provider ObjectProvider) *Fetch {
 		doneCh: make(chan []byte),
 
 		provider: provider,
-		api:      ipfs.NewLocalShell(),
+		api:      api,
 	}
 }
 

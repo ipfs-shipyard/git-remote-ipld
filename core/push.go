@@ -23,6 +23,7 @@ import (
 type Push struct {
 	objectDir string
 	gitDir    string
+	apiURL    string
 
 	done    uint64
 	todoc   uint64
@@ -40,10 +41,11 @@ type Push struct {
 	NewNode func(hash cid.Cid, data []byte) error
 }
 
-func NewPush(gitDir string, tracker *Tracker, repo *git.Repository) *Push {
+func NewPush(gitDir string, tracker *Tracker, repo *git.Repository, apiURL string) *Push {
 	return &Push{
 		objectDir: path.Join(gitDir, "objects"),
 		gitDir:    gitDir,
+		apiURL:    apiURL,
 
 		todo:    list.New(),
 		log:     log.New(os.Stderr, "push: ", 0),
@@ -67,7 +69,12 @@ func (p *Push) PushHash(hash string) error {
 func (p *Push) doWork() error {
 	defer p.wg.Wait()
 
-	api := ipfs.NewLocalShell()
+	var api *ipfs.Shell
+	if len(p.apiURL) == 0 {
+		api = ipfs.NewLocalShell()
+	} else {
+		api = ipfs.NewShell(p.apiURL)
+	}
 
 	intch := make(chan os.Signal, 1)
 	signal.Notify(intch, os.Interrupt)

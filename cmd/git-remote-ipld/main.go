@@ -11,8 +11,10 @@ import (
 )
 
 const (
-	IPLD_PREFIX = "ipld://"
-	IPFS_PREFIX = "ipfs://"
+	PREFIX_SEP = "://"
+
+	IPLD_PREFIX = "ipld" + PREFIX_SEP
+	IPFS_PREFIX = "ipfs" + PREFIX_SEP
 
 	EMPTY_REPO = "QmUNLLsPACCz1vLxQVkXqqLX5R1X345qqfHbsf67hvA3Nn"
 )
@@ -23,15 +25,55 @@ func Main(args []string, reader io.Reader, writer io.Writer, logger *log.Logger)
 	}
 
 	remoteName := args[2]
-	if strings.HasPrefix(remoteName, IPLD_PREFIX) || strings.HasPrefix(remoteName, IPFS_PREFIX) {
-		remoteName = remoteName[len(IPLD_PREFIX):]
+
+	sepIdx := strings.Index(remoteName, PREFIX_SEP)
+	prefix := ""
+	if sepIdx > 0 {
+		prefix = remoteName[:sepIdx + len(PREFIX_SEP)]
+		remoteName = remoteName[len(prefix):]
+	} else {
+		return fmt.Errorf("Invalid URL: %s", remoteName)
 	}
 
+	apiPrefixIdx := strings.Index(prefix, "+")
+	apiPrefix := ""
+	if apiPrefixIdx == 0 {
+		return fmt.Errorf("Invalid URL prefix: %s", prefix)
+	} else if apiPrefixIdx > 0 {
+		apiPrefix = prefix[apiPrefixIdx+1:]
+		prefix = prefix[:apiPrefixIdx] + PREFIX_SEP
+	}
+
+	if prefix != IPLD_PREFIX && prefix != IPFS_PREFIX {
+		return fmt.Errorf("Unknown URL prefix: %s", prefix)
+	}
+
+	slashIdx := strings.LastIndex(remoteName, "/")
+
+	apiURL := os.Getenv("IPFS_API_URL")
+	if slashIdx < 0 {
+		if len(apiPrefix) != 0 {
+			return fmt.Errorf("Prefix has been provided for the API, but not an API URL")
+		}
+	} else {
+		apiURL = apiPrefix + remoteName[:slashIdx+1]
+	}
+
+	// Quirk: The go-ipfs-api throws unexpected redirect if the API URL ends with /
+	if strings.HasSuffix(apiURL, "/") {
+		apiURL = apiURL[:len(apiURL)-1]
+	}
+
+	if len(apiURL) > 0 {
+		fmt.Fprintf(os.Stderr, "Using API URL: %s\n", apiURL)
+	}
+
+	remoteName = remoteName[slashIdx+1:]
 	if remoteName == "" {
 		remoteName = EMPTY_REPO
 	}
 
-	remote, err := core.NewRemote(&IpnsHandler{remoteName: remoteName}, reader, writer, logger)
+	remote, err := core.NewRemote(&IpnsHandler{apiURL: apiURL, remoteName: remoteName}, reader, writer, logger, apiURL)
 	if err != nil {
 		return err
 	}
