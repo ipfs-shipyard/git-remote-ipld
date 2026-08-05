@@ -5,4 +5,6 @@ runs:
   using: 'composite'
   steps:
     - uses: ipfs/download-ipfs-distribution-action@v1
+      with:
+        cache: false
     - uses: ipfs/start-ipfs-daemon-action@v1

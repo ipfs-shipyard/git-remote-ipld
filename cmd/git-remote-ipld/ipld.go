@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"path"
 	"strings"
 
@@ -82,7 +82,7 @@ func (h *IpnsHandler) ProvideBlock(cid string, tracker *core.Tracker) ([]byte, e
 		return nil, errors.New("cat error")
 	}
 
-	data, err := ioutil.ReadAll(r)
+	data, err := io.ReadAll(r)
 	if err != nil {
 		return nil, err
 	}

@@ -1,5 +1,4 @@
 //go:build !windows || !386
-// +build !windows !386
 
 // TestCapabilities fails on win32 machines because badger exits with:
 //  The process cannot access the file because it is being used by another process.
@@ -9,7 +8,6 @@ package main
 import (
 	"bytes"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -89,7 +87,7 @@ func setupTest(t *testing.T) string {
 		t.Fatal("source is not a directory")
 	}
 
-	tmpdir, err := ioutil.TempDir("", "git-test")
+	tmpdir, err := os.MkdirTemp("", "git-test")
 	if err != nil {
 		t.Fatal(err)
 	}
